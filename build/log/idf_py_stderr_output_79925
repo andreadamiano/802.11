@@ -1,0 +1,9 @@
+Command: cmake -G Ninja -B /home/andrea/projects/Software/Wifi/build -DPYTHON_DEPS_CHECKED=1 -DPYTHON=/home/andrea/.espressif/tools/python/v6.0/venv/bin/python -DESP_PLATFORM=1 -DIDF_TARGET=esp32 -DCCACHE_ENABLE=False /home/andrea/projects/Software/Wifi
+Configuration Report               
+ ───────────────────────────────── 
+   Parser Version: 1               
+   Verbosity: default              
+   Defaults policy: sdkconfig      
+   Status: Finished successfully   
+                                   
+ ───────────────────────────────── 

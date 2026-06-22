@@ -1,0 +1,13 @@
+# Target labels
+ bootloader
+# Source files and their labels
+/home/andrea/projects/Software/Wifi/build/CMakeFiles/bootloader
+/home/andrea/projects/Software/Wifi/build/CMakeFiles/bootloader.rule
+/home/andrea/projects/Software/Wifi/build/CMakeFiles/bootloader-complete.rule
+/home/andrea/projects/Software/Wifi/build/bootloader-prefix/src/bootloader-stamp/bootloader-build.rule
+/home/andrea/projects/Software/Wifi/build/bootloader-prefix/src/bootloader-stamp/bootloader-configure.rule
+/home/andrea/projects/Software/Wifi/build/bootloader-prefix/src/bootloader-stamp/bootloader-download.rule
+/home/andrea/projects/Software/Wifi/build/bootloader-prefix/src/bootloader-stamp/bootloader-install.rule
+/home/andrea/projects/Software/Wifi/build/bootloader-prefix/src/bootloader-stamp/bootloader-mkdir.rule
+/home/andrea/projects/Software/Wifi/build/bootloader-prefix/src/bootloader-stamp/bootloader-patch.rule
+/home/andrea/projects/Software/Wifi/build/bootloader-prefix/src/bootloader-stamp/bootloader-update.rule

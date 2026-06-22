@@ -1,0 +1,116 @@
+Nomenclature: 
+    1) Distribution system:
+        - several access points connected to form a large coverage area
+
+    2) Access points:
+        - devices that performes the wireless-to-wired bridging function
+
+    3) Stations:
+        - devices with wireless network interfaces
+
+    4) Wireless medium:
+        - physical layers to move frames from station to station,
+
+
+Media Access Control (MAC) Layer 2 sublayer:
+
+    1) Challenges:
+        - RF Link Quality: Positive ACKS
+
+        - The Hidden Node Problem: Wireless networks have fuzzier boundaries, sometimes to the point where each node may not be able to communicate with every other node in the wireless networks.
+        To prevent collision stations can use Request to Send (RTS) and Clear to Send (CTS) signals to clear out an area. Because it consume a fair amount of capacity it is used only in high-capacity environments and environments with significant contention on transmission.
+
+    2) Access modes:
+        - DCF: To avoid collisions, stations use a random backoff after each frame, with the first transmitter seizing the channel. In some circumstances, the DCF may use the CTS/RTS clearing technique to further reduce the possibility of collisions.
+
+        - PCF: Point coordination, which resides inside access points, poll every station of the networks, once at a time,  for new data. Point coordination can transmit frames after a shorter time, this allow them to gain precedence over other stations.
+
+        - Physical carrier-sensing and virtual carrier-sensing is adopted to detect if the medium (air) is busy. 
+            *  RF transceiver are almost always half duplex, since it's very expensive to trasmit and receive at the same time.
+            * Virtual carrier-sensing is provided by the Network Allocation Vector (NAV). Every frame has a NAV field, when a station hear a packet it reads the NAv and sleep for that period of time before trying to transmit again.
+            To ensure a frame transmission is not interrupted the NAV is sent inside the RTS frame. The AP receiving the RTS will respond with a CTS with a shorter time NAV.   
+
+        - Interframe spacing:  four different interframe spaces, (varying interframe spacings create different priority levels for different types of traffic):
+            * short interframe space (SIFS): highest-priority transmissions, such as RTS/CTS frames and positive ACKS
+            * PCF interframe space (PIFS): sometimes erroneously called the priority interframe space
+            * DCF interframe space (DIFS): minimum medium idle time, used by most traffic. 
+            * Extended interframe space (EIFS): it is used only when there is an error in frame transmission.
+
+        - Backoff:
+            * after every frame is sent and DCF has been waited, every station waits for an additional backoff period before attempting to access the medium. The shortest backoff win the race.
+            * Each time a trasmission fails the backoff is selected from a larger range 
+
+        - Additional rules:
+            * NAV is updated frame by frame using the bigger one every time
+            * error recovery is responsibility of the station
+            * extended frame sequences are required for higher-level packets that are larger than configured thresholds
+            
+
+    3) Error recovery:
+        - is up to the station
+        - every station has a short retry count and the long retry count, every frame is assigned to either of the 2 dependning on the length 
+        - in addition to the associated retry count, fragments are given a maximum "lifetime"  which starts when the fragments is trasmitted for the first time
+
+    4) Fragmentation:
+        - fragmentation takes place when a higher-level packet's length exceeds the fragmentation threshold configured by the network administrator
+        - fragments all have the same frame sequence number but have ascending fragment numbers to aid in reassembly.
+        - fragments and their acknowledgments are separated by the SIFS, so a station retains control of the channel during a fragmentation burst
+        - the NAV is also used to ensure that other stations don't use the channel during the fragmentation burst
+
+    5) Frame format: 
+        mulitple bytes field are sended in Low Endian format
+        inside each byte, the bits are transmitted Least Significant Bit (b0) first (so they arrive in reverse order)
+        - frame control:  2 bytes
+            * protocol version: 2 bits 
+            * type: 2 bits              
+            * subtype: 4 bits           
+            * to_ds: 1 bit (ndicate whether a frame is destined for the distribution system)            
+            * from_ds: 1 bit (indicate whether a frame is destined for the distribution system)        
+            * more_fragments: 1 bit (signal the message is part of a higher level message that has been fragmented)
+            * retry: 1 bit (signal that the message is a retrasmission)             
+            * power_mgmt: 1 bit (idicates whether the sender will be in a power-saving mode after the completion of the current atomic frame exchange) 
+            * more_data: 1 bit (set by an access point that buffer data for a device that is in power saving mode)       
+            * protected_frame: 1 bit ()
+            * order: 1 bit       
+        - duration / ID field: 2 bytes
+            * when bit 15 is 0 the field is used to set the NAV (microseconds that the medium is expected to remain busy for the transmission currently in progres)
+            * when bit 15 is set to 1 and all other bits to 0 it represent the NAV during a contention free period
+            * both bit 15 and 14 set to 1 signifies that the message was sent by power save poll station, the remaining 14 bits represent the unique stattion ID
+        - address fileds: up to 4 address fields of 48 bits (the physical MAC adddress)
+            * address 1 is the receiver, the station that will hand the frame to higher protocol layers for processing
+            * address 2 is the transmitter
+            * address 3 is the utlimate destination/source address (is the bridge that helps the message reach the final destination/source passing via the access point)
+
+            * if the first bit of the address is 0, the address represents a single station (unicast)
+            * if the first bit is a 1, the address represents a group of physical stations and is called a multicast address
+        
+        - sequence control field: 16 bit field  
+            * higher-level frames are each given a sequence number as they are passed to the MAC for transmission
+            * bits 4:15 store the sequence number (which is a modulo-4096 counter)
+            * bits 0:3 store the fragment number (fragments of the same higher level packet share the same sequence number)
+
+        - frame body:
+            * it can store up to 2,304 bytes of higher level data
+
+        - frame check sequence:
+            * 32 bits CRC check
+            * frames that pass the integrity check must also wait for a positive ACK or they are retrasmitted
+
+    6) IP encapsulation: 
+        - before trasmitting the IP frame, the entire frame is logically encapsulated into a LLC frame, which is then handled to the MAC layer which handles the trasmission and the fragmentation 
+
+    7) Contention-Based Data Service:
+        - broadcast and multicast frames have the simplest frame exchanges because there is no acknowledgment. Because the frame exchange is a single-frame sequence, the NAV is set to 0
+        - unicast data frames must be acknowledged
+        - many higher-layer network protocols, including IP, incorporate fragmentation to help avoid interference. All intermediate frames use the NAV to lock the medium for the next frame. Fragmentation can be tuned by setting the fragmentation threshold
+            * higher fragmentation thresholds mean that frames are delivered with less overhead, but the cost to a lost or damaged frame is much higher because more data must be discarded and retransmitted
+        - RTS/CTS exchange can be used to reserve the medium. It is often combined with fragmentation
+        - stations can maximize battery life by shutting down the radio transceiver and sleeping periodically. To retrieve buffered frames, newly awakened stations use PS-Poll frames. Instead of an immediate response, access points can also respond with a simple acknowledgment (deferred response), the  station requesting a frame with a PS-Poll must stay awake until it is delivered.
+        
+         
+
+    Scanning:
+        - active scanning, involves sending a probe requests that either specify an SSID or leaves the SSID field empty. An empty SSID field causes all APs within range  to respond with a probe response frame.
+        - passive scanning, involves listening for beacon frame sent by an acess point
+
+    

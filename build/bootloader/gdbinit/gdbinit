@@ -1,0 +1,2 @@
+source /home/andrea/projects/Software/Wifi/build/bootloader/gdbinit/symbols
+source /home/andrea/projects/Software/Wifi/build/bootloader/gdbinit/connect
