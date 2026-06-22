@@ -39,6 +39,14 @@ typedef struct {
     uint8_t payload[]; 
 } __attribute__((packed)) mac_frame_t;
 
+typedef struct {
+    uint16_t frame_control;
+    uint16_t duration;
+    mac_address_t receiver_address; // Receiver Address
+    uint8_t fcs[4]; 
+    uint8_t _pad[2];  
+} __attribute__((packed)) ack_frame_t;
 
 
 void print_frame(mac_frame_t* frame, uint8_t frame_len); 
+int16_t get_tag(mac_frame_t* frame, uint8_t frame_len, uint8_t tag, uint8_t** content);  

@@ -2,6 +2,48 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+
+uint8_t get_fixed_params_length(frame_control_t fc) 
+{
+    // We only process Management Frames (Type == 0)
+    if (fc.type != 0) {
+        return 0; 
+    }
+
+    switch (fc.subtype) {
+        case 0:  // Association Request
+            return 4;   
+            
+        case 1:  // Association Response
+        case 3:  // Reassociation Response
+            return 6;   
+            
+        case 2:  // Reassociation Request
+            return 10;  
+            
+        case 4:  // Probe Request
+        case 9:  // ATIM Frame
+            return 0;   
+            
+        case 5:  // Probe Response
+        case 8:  // Beacon Frame
+            return 12;  
+            
+        case 10: // Disassociation
+        case 12: // Deauthentication
+            return 2;   
+            
+        case 11: // Authentication
+            return 6;   
+            
+        case 13: // Action Frame
+            return 0; 
+
+        default:
+            return 0;   
+    }
+}
+
 void print_frame(mac_frame_t* frame, uint8_t frame_len)
 {
     if (frame == NULL) {
@@ -42,20 +84,47 @@ void print_frame(mac_frame_t* frame, uint8_t frame_len)
 
     printf("============ PAYLOAD ============\n");
     
-    uint8_t* ch = frame->payload;
-    uint8_t current_byte = 24;  //the header is 24 bytes long
+    uint8_t fixed_params_length = get_fixed_params_length(frame->header.frame_control);
+    uint8_t* ch = frame->payload + fixed_params_length;
+    uint8_t current_byte = 24 + fixed_params_length;  //the header is 24 bytes long + 12 bytes of probe response paramters
+    frame_len -= 4; //subtract the CRC field
 
     while (current_byte < frame_len)
     {
-        printf("Tag:  %02X\n", *(ch++));
-
-        uint8_t* tag_length = (uint8_t*) ch;
-        printf("Content length:  %d\n", *tag_length);
+        uint8_t tag_number = *(ch++);
+        uint8_t tag_length = *(ch++);
+        printf("Tag:  %02X\n", tag_number);
+        printf("Content length:  %d\n", tag_length);
         printf("Content: ");
-        for(int i =0; i < *tag_length; ++i,  ++ch)   printf("%02X", *ch);
+        for(int i =0; i < tag_length; ++i,  ++ch)   printf("%02X", *ch);
         printf("\n");
-        current_byte += *tag_length + 2;
+        current_byte += tag_length + 2;
     }
-    printf("============ END OF FRAME ============\n");
-    printf("\n\n");
+    printf("============ END OF FRAME ============\n\n");
+}
+
+int16_t get_tag(mac_frame_t* frame, uint8_t frame_len, uint8_t tag, uint8_t** content)
+{
+    int8_t fixed_params_length = get_fixed_params_length(frame->header.frame_control);
+    uint8_t* ch = frame->payload + fixed_params_length;
+    uint8_t current_byte = 24 + fixed_params_length;  //the header is 24 bytes long + 12 bytes of probe response paramters
+    frame_len -= 4; //subtract the CRC field
+
+    while (current_byte < frame_len)
+    {
+        uint8_t tag_number = *(ch++);
+        uint8_t tag_length = *(ch++);
+
+        if (tag_number == tag)
+        {
+            *content = ch; 
+            return tag_length;
+        }
+
+        ch += tag_length;
+        current_byte += tag_length + 2;
+    }
+
+    *content = NULL;
+    return -1;
 }

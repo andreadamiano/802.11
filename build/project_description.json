@@ -1,7 +1,7 @@
 {
     "version":            "1.3",
     "project_name":       "Wifi",
-    "project_version":    "1",
+    "project_version":    "7308623-dirty",
     "project_path":       "/home/andrea/projects/Software/Wifi",
     "idf_path":           "/home/andrea/.espressif/v6.0/esp-idf",
     "build_dir":          "/home/andrea/projects/Software/Wifi/build",
@@ -1735,7 +1735,7 @@
             "managed_reqs": [],
             "managed_priv_reqs": [],
             "file": "/home/andrea/projects/Software/Wifi/build/esp-idf/main/libmain.a",
-            "sources": [ "/home/andrea/projects/Software/Wifi/main/active_scanning.c", "/home/andrea/projects/Software/Wifi/main/utils/frames.c" ],
+            "sources": [ "/home/andrea/projects/Software/Wifi/main/active_scanning.c", "/home/andrea/projects/Software/Wifi/main/utils/frames.c", "/home/andrea/projects/Software/Wifi/main/utils/802.11.c" ],
             "include_dirs": [ ".", "utils" ]
         },
         "mbedtls": {
