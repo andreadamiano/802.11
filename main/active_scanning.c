@@ -15,8 +15,9 @@ uint8_t access_point_mac[6];
 mac_frame_t received_frame[MAX_FRAME_SIZE];
 uint16_t received_frame_len; 
 uint8_t ap_channel;
+bool promiscuous_mode = true;
 
-void IRAM_ATTR process_packet(void* buffer, wifi_promiscuous_pkt_type_t type)
+void process_packet(void* buffer, wifi_promiscuous_pkt_type_t type)
 {
     wifi_promiscuous_pkt_t *wifi_packet = (wifi_promiscuous_pkt_t *) buffer; 
 
@@ -34,9 +35,10 @@ void IRAM_ATTR process_packet(void* buffer, wifi_promiscuous_pkt_type_t type)
 
         if (content_len && (memcmp((char*) content, SSID, (uint8_t) strlen(SSID)) == 0) && (memcmp(frame->header.address1.addr, &(uint64_t){SPOOF_MAC_ADDRESS}, 6) == 0))
         {
-            // send_ack(received_frame->header.address2.addr);
-
             //save global states
+            printf("Operating on Channel: %d\n", wifi_packet->rx_ctrl.channel);
+            print_frame(frame, frame_len);
+
             memcpy(received_frame, frame, frame_len);
             received_frame_len = frame_len;
             ap_channel = wifi_packet->rx_ctrl.channel;
@@ -47,7 +49,6 @@ void IRAM_ATTR process_packet(void* buffer, wifi_promiscuous_pkt_type_t type)
 
 
 }
-
 
 void app_main(void)
 {
@@ -81,28 +82,34 @@ void app_main(void)
     ret = esp_wifi_set_mode(WIFI_MODE_STA);
     ESP_ERROR_CHECK(ret);
 
-    ret = esp_wifi_set_promiscuous(true);  
+    ret = esp_wifi_set_promiscuous(promiscuous_mode);  
     ESP_ERROR_CHECK(ret);
 
     ret = esp_wifi_set_promiscuous_rx_cb(process_packet); //register a callback 
+    ESP_ERROR_CHECK(ret);
+
+    ret = esp_wifi_set_mac(WIFI_IF_STA, (const uint8_t*)&(uint64_t){SPOOF_MAC_ADDRESS}); //by settings the mac address, the esp32 will automatically send the ack message upon receiving the frame
     ESP_ERROR_CHECK(ret);
 
     printf("Starting WiFI driver\n");
     ret = esp_wifi_start();
     ESP_ERROR_CHECK(ret);
 
-    uint8_t current_channel = 1;
-    while(!probe_response_received)
-    {
-        vTaskDelay(pdMS_TO_TICKS(200));
-        esp_wifi_set_channel(current_channel, WIFI_SECOND_CHAN_NONE);
-        send_probe_request(SSID);
+    esp_wifi_set_channel(2, WIFI_SECOND_CHAN_NONE);
+    send_probe_request(SSID);
 
-        current_channel++;
-        if (current_channel > 13) {
-            current_channel = 1;
-        }
-    }
+    // uint8_t current_channel = 1;
+    // while(!probe_response_received)
+    // {
+    //     vTaskDelay(pdMS_TO_TICKS(200));
+    //     esp_wifi_set_channel(current_channel, WIFI_SECOND_CHAN_NONE);
+    //     send_probe_request(SSID);
+
+    //     current_channel++;
+    //     if (current_channel > 13) {
+    //         current_channel = 1;
+    //     }
+    // }
 
     
     // printf("Operating on Channel: %d\n", ap_channel);
@@ -110,3 +117,6 @@ void app_main(void)
 
     
 }
+
+
+

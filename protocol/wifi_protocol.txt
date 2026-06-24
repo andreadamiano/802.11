@@ -107,10 +107,26 @@ Media Access Control (MAC) Layer 2 sublayer:
         - RTS/CTS exchange can be used to reserve the medium. It is often combined with fragmentation
         - stations can maximize battery life by shutting down the radio transceiver and sleeping periodically. To retrieve buffered frames, newly awakened stations use PS-Poll frames. Instead of an immediate response, access points can also respond with a simple acknowledgment (deferred response), the  station requesting a frame with a PS-Poll must stay awake until it is delivered.
         
-         
-
-    Scanning:
+    8) Scanning:
         - active scanning, involves sending a probe requests that either specify an SSID or leaves the SSID field empty. An empty SSID field causes all APs within range  to respond with a probe response frame.
         - passive scanning, involves listening for beacon frame sent by an acess point
 
+    9) 802.11 State Machine:
+        - 
+
+
+
+
+Put Network Card in monitor mode:
+    - sudo airmon-ng check kill: kill all process that will interfere with monitor mode
+    - sudo airmon-ng start wlp0s20f3 2: put wlan0 in monitor mode
     
+Restore:
+    - stop monitor mode: sudo airmon-ng stop wlp0s20f3mon
+    - restart NetworkManager: sudo systemctl start NetworkManager
+
+Filter for a specific MAC on :
+    - wlan.addr == <MAC>
+
+Example on how to use raw sockets for injecting 802.11 frames:
+    - https://github.com/MinimumLaw/80211_raw/blob/master/sender.c

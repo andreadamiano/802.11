@@ -42,9 +42,7 @@ typedef struct {
 typedef struct {
     uint16_t frame_control;
     uint16_t duration;
-    mac_address_t receiver_address; // Receiver Address
-    uint8_t fcs[4]; 
-    uint8_t _pad[2];  
+    mac_address_t receiver_address; 
 } __attribute__((packed)) ack_frame_t;
 
 

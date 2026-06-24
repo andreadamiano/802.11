@@ -1,0 +1,19 @@
+Command: ninja all
+[1/10] Performing build step for 'bootloader'
+[1/1] cd /home/andrea/projects/Software/Wifi/build/bootloader && /home/andrea/.espressif/tools/python/v6.0/venv/bin/python /home/andrea/.espressif/v6.0/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x1000 /home/andrea/projects/Software/Wifi/build/bootloader/bootloader.bin
+Bootloader binary size 0x6610 bytes. 0x9f0 bytes (9%) free.
+[2/10] Building C object esp-idf/main/CMakeFiles/__idf_main.dir/utils/802.11.c.obj
+[3/10] No install step for 'bootloader'
+[4/10] Building C object esp-idf/main/CMakeFiles/__idf_main.dir/active_scanning.c.obj
+[5/10] Linking C static library esp-idf/main/libmain.a
+[6/10] Completed 'bootloader'
+[7/10] Generating esp-idf/esp_system/ld/sections.ld
+[8/10] Linking CXX executable Wifi.elf
+[9/10] Generating binary image from built executable
+esptool v5.3.dev2
+Creating ESP32 image...
+Merged 2 ELF sections.
+Successfully created ESP32 image.
+Generated /home/andrea/projects/Software/Wifi/build/Wifi.bin
+[10/10] cd /home/andrea/projects/Software/Wifi/build && /home/andrea/.espressif/tools/python/v6.0/venv/bin/python /home/andrea/.espressif/v6.0/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 partition --type app /home/andrea/projects/Software/Wifi/build/partition_table/partition-table.bin /home/andrea/projects/Software/Wifi/build/Wifi.bin
+Wifi.bin binary size 0xb7010 bytes. Smallest app partition is 0x100000 bytes. 0x48ff0 bytes (29%) free.
