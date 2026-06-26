@@ -6,6 +6,7 @@
 #include "utils/settings.h"
 #include "utils/802.11.h"
 #include "utils/rawsocket.h"
+#include "utils/frames.h"
 
 int main (int argc, char* argv[])
 {
@@ -15,8 +16,9 @@ int main (int argc, char* argv[])
     char ssid[16];
     int raw_socket;
     int ret; 
-    uint8_t buffer[256]; 
+    uint8_t buffer[256];
     size_t bytes; 
+    mac_frame_t* mac_frame; 
 
 
     if (argc < 4)
@@ -51,8 +53,8 @@ int main (int argc, char* argv[])
     
     while (true)
     {
-        bytes = read(raw_socket, &buffer, sizeof(buffer)); 
-        printf("Received raw frame: %s\n", buffer); 
+        bytes = read(raw_socket, buffer, sizeof(buffer)); 
+        print_frame(buffer, bytes);
     }
     
 

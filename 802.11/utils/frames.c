@@ -44,13 +44,22 @@ uint8_t get_fixed_params_length(frame_control_t fc)
     }
 }
 
-void print_frame(mac_frame_t* frame, uint8_t frame_len)
+void print_frame(uint8_t* buffer, uint16_t buffer_len)
 {
-    if (frame == NULL) {
-        printf("Error: Frame pointer is NULL\n");
+    if (buffer == NULL || buffer_len < 4) {
         return;
     }
 
+    //handle the radiotap header
+    uint16_t radiotap_len = *(uint16_t *)(buffer + 2);
+    if (radiotap_len >= buffer_len) {
+        return; 
+    }
+
+    mac_frame_t* frame = (mac_frame_t*)(buffer + radiotap_len);
+    uint16_t frame_len = buffer_len - radiotap_len;
+
+    //parse the 802.11 header
     frame_control_t fc = frame->header.frame_control;
 
     printf("============ FRAME CONTROL ============\n");
@@ -87,7 +96,11 @@ void print_frame(mac_frame_t* frame, uint8_t frame_len)
     uint8_t fixed_params_length = get_fixed_params_length(frame->header.frame_control);
     uint8_t* ch = frame->payload + fixed_params_length;
     uint8_t current_byte = 24 + fixed_params_length;  //the header is 24 bytes long + 12 bytes of probe response paramters
-    frame_len -= 4; //subtract the CRC field
+    
+    //subtract the CRC field
+    if (frame_len > 4) {
+        frame_len -= 4; 
+    }
 
     while (current_byte < frame_len)
     {
@@ -103,12 +116,17 @@ void print_frame(mac_frame_t* frame, uint8_t frame_len)
     printf("============ END OF FRAME ============\n\n");
 }
 
-int16_t get_tag(mac_frame_t* frame, uint8_t frame_len, uint8_t tag, uint8_t** content)
+int16_t get_tag(mac_frame_t* frame, uint16_t frame_len, uint8_t tag, uint8_t** content)
 {
     int8_t fixed_params_length = get_fixed_params_length(frame->header.frame_control);
     uint8_t* ch = frame->payload + fixed_params_length;
     uint8_t current_byte = 24 + fixed_params_length;  //the header is 24 bytes long + 12 bytes of probe response paramters
-    frame_len -= 4; //subtract the CRC field
+
+    //subtract the CRC field
+    if (frame_len > 4)
+    {
+        frame_len -= 4; 
+    }
 
     while (current_byte < frame_len)
     {

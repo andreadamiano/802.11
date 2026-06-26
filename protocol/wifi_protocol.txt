@@ -117,9 +117,22 @@ Media Access Control (MAC) Layer 2 sublayer:
 
 
 
+Radiotap header:
+
+    it_version     
+    it_pad
+    it_len      
+    it_present     
+
+
 Put Network Card in monitor mode:
     - sudo airmon-ng check kill: kill all process that will interfere with monitor mode
     - sudo airmon-ng start wlp0s20f3 2: put wlan0 in monitor mode
+
+    alternativeli:
+    - sudo ip link set wlxc8787d94fb10 down
+    - sudo iw wlxc8787d94fb10 set monitor control
+    - sudo ip link set wlxc8787d94fb10 up
     
 Restore:
     - stop monitor mode: sudo airmon-ng stop wlp0s20f3mon
