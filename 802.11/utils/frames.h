@@ -1,3 +1,6 @@
+#ifndef FRAMES_H
+#define FRAMES_H
+
 #include <stdint.h>
 
 //bits are filled from right to left  (starting at the least significant bit)
@@ -46,5 +49,4 @@ typedef struct {
 } __attribute__((packed)) ack_frame_t;
 
 
-void print_frame(uint8_t* buffer, uint16_t buffer_len); 
-int16_t get_tag(mac_frame_t* frame, uint16_t frame_len, uint8_t tag, uint8_t** content);  
+#endif

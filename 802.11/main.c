@@ -3,23 +3,27 @@
 #include <stdint.h>
 #include <linux/if_ether.h> 
 #include <unistd.h>
+#include <pthread.h>
 #include "utils/settings.h"
 #include "utils/802.11.h"
 #include "utils/rawsocket.h"
 #include "utils/frames.h"
+#include <stdlib.h>
+
+
+//global states
+char ifname[16]; //name of the network interface
+unsigned int local_mac[MAC_LEN];
+unsigned int remote_mac[MAC_LEN];
+char ssid[16];
+int ret; 
+pthread_t listening_mac_thread_id; 
+int raw_socket;
+mac_frame_t* mac_frame; 
+
 
 int main (int argc, char* argv[])
 {
-    char ifname[16]; //name of the network interface
-    unsigned int local_mac[MAC_LEN];
-    unsigned int remote_mac[MAC_LEN];
-    char ssid[16];
-    int raw_socket;
-    int ret; 
-    uint8_t buffer[256];
-    size_t bytes; 
-    mac_frame_t* mac_frame; 
-
 
     if (argc < 4)
     {
@@ -50,11 +54,16 @@ int main (int argc, char* argv[])
         return -1;
     }
 
+    //launch a background thread listening for incoming mac frames in monitor mode
+    if (pthread_create(&listening_mac_thread_id, NULL, &listen_mac_frames, (void*) &raw_socket) != 0)
+    {
+        perror("Creating listening thread"); 
+        return -1; 
+    }
     
     while (true)
     {
-        bytes = read(raw_socket, buffer, sizeof(buffer)); 
-        print_frame(buffer, bytes);
+        sleep(1); 
     }
     
 

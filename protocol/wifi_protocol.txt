@@ -118,27 +118,32 @@ Media Access Control (MAC) Layer 2 sublayer:
 
 
 Radiotap header:
+    - It's a standard mechanism used in modern operating systems to supply supplementary information about raw over-the-air Wi-Fi frames. 
+    - It's added by the network driver.
+    - It contains:
+        * version number of the radiotap header (1 byte + 1 byte of padding)
+        * total lenght of the header (2 bytes)      
+        * 4 bytes bitmask that acts as a checklist for which optional physical-layer radio fields are attached to this specific packet
 
-    it_version     
-    it_pad
-    it_len      
-    it_present     
 
+Network Card confgiurations:
+    - put the NIC in monitor mode:
+        * sudo airmon-ng check kill: kill all process that will interfere with monitor mode
+        * sudo airmon-ng start wlp0s20f3 2: put wlan0 in monitor mode
 
-Put Network Card in monitor mode:
-    - sudo airmon-ng check kill: kill all process that will interfere with monitor mode
-    - sudo airmon-ng start wlp0s20f3 2: put wlan0 in monitor mode
-
-    alternativeli:
-    - sudo ip link set wlxc8787d94fb10 down
-    - sudo iw wlxc8787d94fb10 set monitor control
-    - sudo ip link set wlxc8787d94fb10 up
+        alternatively:
+        * sudo ip link set wlxc8787d94fb10 down
+        * sudo iw wlxc8787d94fb10 set monitor control 
+        * sudo ip link set wlxc8787d94fb10 up
     
-Restore:
-    - stop monitor mode: sudo airmon-ng stop wlp0s20f3mon
-    - restart NetworkManager: sudo systemctl start NetworkManager
+    - put the NIC back in managed mode:
+        * stop monitor mode: sudo airmon-ng stop wlp0s20f3mon
+        * restart NetworkManager: sudo systemctl start NetworkManager
 
-Filter for a specific MAC on :
+    - get info about a NIC:
+        * iw dev wlxc8787d94fb10 info
+
+Filter for a specific MAC on wireshark:
     - wlan.addr == <MAC>
 
 Example on how to use raw sockets for injecting 802.11 frames:
