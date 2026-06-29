@@ -57,15 +57,12 @@ int main (int argc, char* argv[])
     }
 
     //launch a background thread listening for incoming mac frames in monitor mode
-    memset(&socket_context, -1, sizeof(socket_context)); //-1 will be considered a default so it will not be filtered
-    socket_context.raw_socket = raw_socket; 
-    socket_context.running = true; 
-    pthread_mutex_init(&socket_context.filter_mutex, NULL);
+    initialize_socket_context(&socket_context, raw_socket);
 
-    socket_context.filters.tag.key = 0; 
-    strncpy(socket_context.filters.tag.value, ssid, strlen(ssid));
-    memset(&socket_context.filters.header, 0, sizeof(mac_header_t));
-    socket_context.filters.header.frame_control.subtype = 5; 
+    // socket_context.filters.tag.key = 0; 
+    // strncpy(socket_context.filters.tag.value, ssid, strlen(ssid));
+    // memset(&socket_context.filters.header, 0, sizeof(mac_header_t));
+    // socket_context.filters.header.frame_control.subtype = 5; 
 
     if (pthread_create(&listening_mac_thread_id, NULL, &listen_mac_frames, (void*) &socket_context) != 0)
     {

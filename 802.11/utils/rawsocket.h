@@ -36,5 +36,6 @@ int set_channel(int raw_socket, const char* ifname, int channel);
 void* listen_mac_frames(void* data);  //producer which append to a circular buffer
 void* filter_mac_frames(void* data); //consumer
 int send_mac_frame(int raw_socket, mac_frame_t* frame, int frame_len); 
+void initialize_socket_context(socket_context_t* context ,int raw_socket); 
 
 #endif

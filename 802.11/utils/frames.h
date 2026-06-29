@@ -40,7 +40,7 @@ typedef struct {
 
 typedef struct {
     mac_header_t header; 
-    uint8_t payload[MAC_FRAME_SIZE]; 
+    uint8_t payload[MAX_FRAME_PAYLOAD]; 
 } __attribute__((packed)) mac_frame_t;
 
 typedef struct {

@@ -90,7 +90,7 @@ int set_channel(int raw_socket, const char* ifname, int channel)
 void* listen_mac_frames(void* data)
 {
     socket_context_t* context = (socket_context_t *) data; 
-    uint8_t buffer[MAC_FRAME_SIZE]; //fine tune the buffer size to make mac frames fit inside
+    uint8_t buffer[MAC_FRAME_SIZE]; //fine tune the buffer size to make mac frames fit inside the buffer
     ssize_t bytes; 
     pthread_t filtering_mac_thread_id; 
 
@@ -164,13 +164,23 @@ void* filter_mac_frames(void* data)
     {
        if (dequeue_frame(&current_dequeued_frame, &frame_len))
        {
+            //grab a mutex while reading the current filters (which can be modified asynchronously)
             pthread_mutex_lock(&context->filter_mutex);
             if (filter_frame(&current_dequeued_frame, frame_len, &context->filters))
                 print_frame(&current_dequeued_frame, frame_len); 
-            
-            
             pthread_mutex_unlock(&context->filter_mutex);
 
        }
     }
+}
+
+void initialize_socket_context(socket_context_t* context, int raw_socket)
+{
+    if (context == NULL) 
+        return;
+
+    memset(context, -1, sizeof(socket_context_t)); //-1 will be considered a default so it will not be filtered
+    context->raw_socket = raw_socket; 
+    context->running = true; 
+    pthread_mutex_init(&context->filter_mutex, NULL);
 }

@@ -21,8 +21,8 @@ void enqueue_frame(mac_frame_t* frame, uint16_t frame_len)
     }
     
     new_node = &frame_queue.nodes[(frame_queue.head++ % FRAME_QUEUE_SIZE)];
-    memset(&new_node->frame, 0, sizeof(mac_frame_t));
-    memcpy(&new_node->frame, frame, frame_len);
+    memset(&new_node->frame, 0, sizeof(mac_frame_t)); //remove garbage values from previous enqueues
+    memcpy(&new_node->frame, frame, frame_len); //copy only actual data
     new_node->frame_len = frame_len;
 
     pthread_cond_signal(&frame_queue.cond);
@@ -42,7 +42,7 @@ bool dequeue_frame(mac_frame_t* frame, uint16_t* frame_len)
     struct queue_node* node = &(frame_queue.nodes[(frame_queue.tail++ % FRAME_QUEUE_SIZE)]);
 
     //copy the content of the queue node
-    memcpy(frame, &node->frame, sizeof(mac_frame_t));
+    memcpy(frame, &node->frame, sizeof(mac_frame_t)); 
     *frame_len = node->frame_len;
     pthread_mutex_unlock(&frame_queue.mutex);
     return true; 

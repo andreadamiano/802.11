@@ -35,14 +35,14 @@ int send_probe_request(int raw_socket, const char* ssid){
 
     //payload
     //SSID tag
-    frame.payload[frame_index++] = 0x00;         // Tag Number
-    frame.payload[frame_index++] = ssid_len;     // Tag Length
+    frame.payload[frame_index++] = 0x00;         //tag number
+    frame.payload[frame_index++] = ssid_len;     //tag length
     memcpy(&frame.payload[frame_index], ssid, ssid_len);
     frame_index += ssid_len;                     
 
     //supported rates tag 
-    frame.payload[frame_index++] = 0x01;         // Tag Number
-    frame.payload[frame_index++] = 0x08;         // Tag Length 
+    frame.payload[frame_index++] = 0x01;         //tag number
+    frame.payload[frame_index++] = 0x08;         //tag length 
     frame.payload[frame_index++] = 0x82;         
     frame.payload[frame_index++] = 0x84;         
     frame.payload[frame_index++] = 0x8B;         
@@ -135,35 +135,57 @@ void print_frame(mac_frame_t* frame, uint16_t frame_len)
            frame->header.address3.addr[4], frame->header.address3.addr[5]);
 
     printf("============ PAYLOAD ============\n");
-    
-    uint8_t fixed_params_length = get_fixed_params_length(frame->header.frame_control);
-    uint8_t* ch = frame->payload + fixed_params_length; //the header is 24 bytes long + 12 bytes of probe response paramters
-    uint8_t* frame_end = (uint8_t* )frame + frame_len; //get an hard boundary (to avoid that corrupted mac frames can make the program read past the buffer)
-    
-    //subtract the CRC field
-    if (frame_len > 4) {
-        frame_end -= 4; 
-    }
 
-    while (ch + 2 <= frame_end)
+    if (frame->header.frame_control.type == 0)
     {
-        uint8_t tag_number = *(ch++);
-        uint8_t tag_length = *(ch++);
-
-        printf("Tag:  %02X\n", tag_number);
-        printf("Content length:  %d\n", tag_length);
-        printf("Content: ");
         
-        //prune early if a malformed tag arrives
-        if (ch + tag_length > frame_end)
-        {
-            printf("<truncated>\n"); 
-            return; 
+        uint8_t fixed_params_length = get_fixed_params_length(frame->header.frame_control);
+        uint8_t* ch = frame->payload + fixed_params_length; //the header is 24 bytes long + 12 bytes of probe response paramters
+        uint8_t* frame_end = (uint8_t* )frame + frame_len; //get an hard boundary (to avoid that corrupted mac frames can make the program read past the buffer)
+        
+        //subtract the CRC field
+        if (frame_len > 4) {
+            frame_end -= 4; 
         }
 
-        for(int i =0; i < tag_length; ++i,  ++ch)
+        while (ch + 2 <= frame_end)
         {
-            printf("%02X", *ch);
+            uint8_t tag_number = *(ch++);
+            uint8_t tag_length = *(ch++);
+
+            printf("Tag:  %02X\n", tag_number);
+            printf("Content length:  %d\n", tag_length);
+            printf("Content: ");
+            
+            //prune early if a malformed tag arrives
+            if (ch + tag_length > frame_end)
+            {
+                printf("<truncated>\n"); 
+                printf("============ END OF FRAME ============\n\n");
+                return; 
+            }
+
+            for(int i =0; i < tag_length; ++i,  ++ch)
+            {
+                printf("%02X", *ch);
+            }
+            printf("\n");
+        }
+    }
+    else
+    {
+        //control frames and data frames do not have TLV structure (raw hexdump)
+        uint8_t* ch = frame->payload;
+        uint8_t* frame_end = (uint8_t* )frame + frame_len; //get an hard boundary (to avoid that corrupted mac frames can make the program read past the buffer)
+
+        //subtract the CRC field
+        if (frame_len > 4) {
+            frame_end -= 4; 
+        }
+
+        while(ch < frame_end)
+        {
+            printf("%02X", *(ch++));
         }
         printf("\n");
     }
