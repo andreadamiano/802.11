@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include "utils/settings.h"
 #include "utils/frames.h"
+#include <pthread.h>
 
 struct tag
 {
@@ -25,13 +26,15 @@ typedef struct
     int raw_socket; 
     volatile bool running; 
     struct filters filters;
+    pthread_mutex_t filter_mutex; 
 }socket_context_t;
 
 
 int create_rawsocket(int protocol);
 int bind_rawsocket(char* ifname, int raw_socket, int protocol);
 int set_channel(int raw_socket, const char* ifname, int channel); 
-void* listen_mac_frames(void* data);
+void* listen_mac_frames(void* data);  //producer which append to a circular buffer
+void* filter_mac_frames(void* data); //consumer
 int send_mac_frame(int raw_socket, mac_frame_t* frame, int frame_len); 
 
 #endif

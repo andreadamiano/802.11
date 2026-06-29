@@ -92,8 +92,17 @@ void* listen_mac_frames(void* data)
     socket_context_t* context = (socket_context_t *) data; 
     uint8_t buffer[MAC_FRAME_SIZE]; //fine tune the buffer size to make mac frames fit inside
     ssize_t bytes; 
+    pthread_t filtering_mac_thread_id; 
+
+    //start consumer
+    if (pthread_create(&filtering_mac_thread_id, NULL, &filter_mac_frames, (void*) context) != 0)
+    {
+        perror("Creating filtering thread"); 
+        exit(-1); 
+    }
+
     printf("Started listening thread %ld\n", (unsigned long) pthread_self());
-    while (context)
+    while (context->running)
     {
         bytes = read(context->raw_socket, buffer, sizeof(buffer)); 
         if (bytes > 0)
@@ -106,6 +115,12 @@ void* listen_mac_frames(void* data)
             perror("While reading from raw socket");
             break;
         }
+    }
+
+    if (pthread_join(filtering_mac_thread_id, NULL) != 0)
+    {
+        perror("While joining filtering thread"); 
+        exit(-1);
     }
 
     return NULL;
@@ -136,4 +151,26 @@ int send_mac_frame(int raw_socket, mac_frame_t* frame, int frame_len)
         return -1; 
     }
     return bytes; 
+}
+
+void* filter_mac_frames(void* data)
+{
+    socket_context_t* context = (socket_context_t* )data; 
+    mac_frame_t current_dequeued_frame;
+    uint16_t frame_len;
+
+    printf("Started filtering thread %ld\n", (unsigned long) pthread_self());
+    while(context->running)
+    {
+       if (dequeue_frame(&current_dequeued_frame, &frame_len))
+       {
+            pthread_mutex_lock(&context->filter_mutex);
+            if (filter_frame(&current_dequeued_frame, frame_len, &context->filters))
+                print_frame(&current_dequeued_frame, frame_len); 
+            
+            
+            pthread_mutex_unlock(&context->filter_mutex);
+
+       }
+    }
 }

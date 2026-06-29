@@ -2,6 +2,7 @@
 #define FRAMES_H
 
 #include <stdint.h>
+#include "utils/settings.h"
 
 //bits are filled from right to left  (starting at the least significant bit)
 typedef struct {
@@ -39,7 +40,7 @@ typedef struct {
 
 typedef struct {
     mac_header_t header; 
-    uint8_t payload[]; 
+    uint8_t payload[MAC_FRAME_SIZE]; 
 } __attribute__((packed)) mac_frame_t;
 
 typedef struct {

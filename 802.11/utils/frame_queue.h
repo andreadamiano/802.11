@@ -4,6 +4,7 @@
 #include "utils/frames.h"
 #include "utils/settings.h"
 #include <pthread.h>
+#include <stdbool.h>
 
 typedef struct queue_node
 {
@@ -22,7 +23,7 @@ typedef struct
 }frame_queue_t;
 
 void enqueue_frame(mac_frame_t* frame, uint16_t frame_len); 
-queue_node* dequeue_frame(); 
+bool dequeue_frame(mac_frame_t* frame, uint16_t* frame_len);
 
 
 #endif

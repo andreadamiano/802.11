@@ -19,46 +19,41 @@ int send_probe_request(int raw_socket, const char* ssid){
     uint8_t payload_len = 2 + ssid_len + 10;
     uint16_t frame_size = sizeof(mac_header_t) + payload_len;
     uint16_t bytes; 
+    mac_frame_t frame =  {0}; //zero initialize
 
-    mac_frame_t* frame = (mac_frame_t*) malloc(frame_size);
-    if (frame == NULL)  return 1;
-
-    memset(frame, 0, frame_size); //always zero initialize heap allocated structs
-
-    frame->header.frame_control.protocol_version = 0;
-    frame->header.frame_control.type             = 0; 
-    frame->header.frame_control.subtype          = 4; // Probe Request    
-    frame->header.duration_id = 0x0000;
-    memset(frame->header.address1.addr, 0xFF, 6); // Destination: Broadcast
-    memcpy(frame->header.address2.addr, &(uint64_t){SPOOF_MAC_ADDRESS}, 6); // Source: SPOOFED MAC
-    memset(frame->header.address3.addr, 0xFF, 6); // BSSID: Broadcast
-    frame->header.sequence_control.fragment_number = 0;
-    frame->header.sequence_control.sequence_number = 0;
+    frame.header.frame_control.protocol_version = 0;
+    frame.header.frame_control.type             = 0; 
+    frame.header.frame_control.subtype          = 4; // Probe Request    
+    frame.header.duration_id = 0x0000;
+    memset(frame.header.address1.addr, 0xFF, 6); // Destination: Broadcast
+    memcpy(frame.header.address2.addr, &(uint64_t){SPOOF_MAC_ADDRESS}, 6); // Source: SPOOFED MAC
+    memset(frame.header.address3.addr, 0xFF, 6); // BSSID: Broadcast
+    frame.header.sequence_control.fragment_number = 0;
+    frame.header.sequence_control.sequence_number = 0;
 
     uint32_t frame_index = 0;
 
     //payload
     //SSID tag
-    frame->payload[frame_index++] = 0x00;         // Tag Number
-    frame->payload[frame_index++] = ssid_len;     // Tag Length
-    memcpy(&frame->payload[frame_index], ssid, ssid_len);
+    frame.payload[frame_index++] = 0x00;         // Tag Number
+    frame.payload[frame_index++] = ssid_len;     // Tag Length
+    memcpy(&frame.payload[frame_index], ssid, ssid_len);
     frame_index += ssid_len;                     
 
     //supported rates tag 
-    frame->payload[frame_index++] = 0x01;         // Tag Number
-    frame->payload[frame_index++] = 0x08;         // Tag Length 
-    frame->payload[frame_index++] = 0x82;         
-    frame->payload[frame_index++] = 0x84;         
-    frame->payload[frame_index++] = 0x8B;         
-    frame->payload[frame_index++] = 0x96;         
-    frame->payload[frame_index++] = 0x0C;         
-    frame->payload[frame_index++] = 0x12;         
-    frame->payload[frame_index++] = 0x18;         
-    frame->payload[frame_index++] = 0x24;         
+    frame.payload[frame_index++] = 0x01;         // Tag Number
+    frame.payload[frame_index++] = 0x08;         // Tag Length 
+    frame.payload[frame_index++] = 0x82;         
+    frame.payload[frame_index++] = 0x84;         
+    frame.payload[frame_index++] = 0x8B;         
+    frame.payload[frame_index++] = 0x96;         
+    frame.payload[frame_index++] = 0x0C;         
+    frame.payload[frame_index++] = 0x12;         
+    frame.payload[frame_index++] = 0x18;         
+    frame.payload[frame_index++] = 0x24;         
 
     //send mac frame
-    bytes = send_mac_frame(raw_socket, frame, frame_size);     
-    free(frame);
+    bytes = send_mac_frame(raw_socket, &frame, frame_size);     
     return bytes;
 }
 
@@ -104,11 +99,11 @@ uint8_t get_fixed_params_length(frame_control_t fc)
     }
 }
 
-void print_current_frame()
+void print_frame(mac_frame_t* frame, uint16_t frame_len)
 {
 
     //parse the 802.11 header
-    frame_control_t fc = current_frame->header.frame_control;
+    frame_control_t fc = frame->header.frame_control;
 
     printf("============ FRAME CONTROL ============\n");
     printf("Protocol Version : %u\n", fc.protocol_version);
@@ -125,28 +120,28 @@ void print_current_frame()
     
     printf("============ ADDRESS FIELDS ============\n");
     printf("Address 1: %02X:%02X:%02X:%02X:%02X:%02X\n",
-           current_frame->header.address1.addr[0], current_frame->header.address1.addr[1],
-           current_frame->header.address1.addr[2], current_frame->header.address1.addr[3],
-           current_frame->header.address1.addr[4], current_frame->header.address1.addr[5]);
+           frame->header.address1.addr[0], frame->header.address1.addr[1],
+           frame->header.address1.addr[2], frame->header.address1.addr[3],
+           frame->header.address1.addr[4], frame->header.address1.addr[5]);
            
     printf("Address 2: %02X:%02X:%02X:%02X:%02X:%02X\n",
-           current_frame->header.address2.addr[0], current_frame->header.address2.addr[1],
-           current_frame->header.address2.addr[2], current_frame->header.address2.addr[3],
-           current_frame->header.address2.addr[4], current_frame->header.address2.addr[5]);
+           frame->header.address2.addr[0], frame->header.address2.addr[1],
+           frame->header.address2.addr[2], frame->header.address2.addr[3],
+           frame->header.address2.addr[4], frame->header.address2.addr[5]);
 
     printf("Address 3: %02X:%02X:%02X:%02X:%02X:%02X\n",
-           current_frame->header.address3.addr[0], current_frame->header.address3.addr[1],
-           current_frame->header.address3.addr[2], current_frame->header.address3.addr[3],
-           current_frame->header.address3.addr[4], current_frame->header.address3.addr[5]);
+           frame->header.address3.addr[0], frame->header.address3.addr[1],
+           frame->header.address3.addr[2], frame->header.address3.addr[3],
+           frame->header.address3.addr[4], frame->header.address3.addr[5]);
 
     printf("============ PAYLOAD ============\n");
     
-    uint8_t fixed_params_length = get_fixed_params_length(current_frame->header.frame_control);
-    uint8_t* ch = current_frame->payload + fixed_params_length; //the header is 24 bytes long + 12 bytes of probe response paramters
-    uint8_t* frame_end = (uint8_t* )current_frame + current_frame_len; //get an hard boundary (to avoid that corrupted mac frames can make the program read past the buffer)
+    uint8_t fixed_params_length = get_fixed_params_length(frame->header.frame_control);
+    uint8_t* ch = frame->payload + fixed_params_length; //the header is 24 bytes long + 12 bytes of probe response paramters
+    uint8_t* frame_end = (uint8_t* )frame + frame_len; //get an hard boundary (to avoid that corrupted mac frames can make the program read past the buffer)
     
     //subtract the CRC field
-    if (current_frame_len > 4) {
+    if (frame_len > 4) {
         frame_end -= 4; 
     }
 
@@ -227,13 +222,13 @@ void parse_frame(uint8_t* buffer, uint16_t buffer_len)
 
 }
 
-bool filter_current_frame(struct filters* filters)
+bool filter_frame(mac_frame_t* frame, uint16_t frame_len, struct filters* filters)
 {
     uint8_t* content = NULL; 
-    int content_len = get_tag(current_frame, current_frame_len, filters->tag.key, &content);
+    int content_len = get_tag(frame, frame_len, filters->tag.key, &content);
     bool result = false; 
 
-    if (filters->destination_mac_address[0] == 0xff || (strncmp(current_frame->header.address1.addr, filters->destination_mac_address, 6) == 0))
+    if (filters->destination_mac_address[0] == 0xff || (strncmp(frame->header.address1.addr, filters->destination_mac_address, 6) == 0))
     {
         result = true;
     }
@@ -242,7 +237,7 @@ bool filter_current_frame(struct filters* filters)
         return false; 
     }
 
-    if (filters->destination_mac_address[0] == 0xff || (strncmp(current_frame->header.address2.addr, filters->source_address, 6) == 0))
+    if (filters->destination_mac_address[0] == 0xff || (strncmp(frame->header.address2.addr, filters->source_address, 6) == 0))
     {
         result = true;
     }
@@ -251,7 +246,7 @@ bool filter_current_frame(struct filters* filters)
         return false; 
     }
 
-    if ( *((uint16_t*) &filters->header.frame_control) == 0xffff  || (*((uint16_t*) &current_frame->header.frame_control) == *((uint16_t*) &filters->header.frame_control)))
+    if ( *((uint16_t*) &filters->header.frame_control) == 0xffff  || (*((uint16_t*) &frame->header.frame_control) == *((uint16_t*) &filters->header.frame_control)))
     {
         result = true;
     }
