@@ -148,3 +148,6 @@ Filter for a specific MAC on wireshark:
 
 Example on how to use raw sockets for injecting 802.11 frames:
     - https://github.com/MinimumLaw/80211_raw/blob/master/sender.c
+
+Docs:
+    - https://howiwifi.com/2020/07/13/802-11-frame-types-and-formats/

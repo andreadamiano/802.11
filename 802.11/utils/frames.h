@@ -48,5 +48,11 @@ typedef struct {
     mac_address_t receiver_address; 
 } __attribute__((packed)) ack_frame_t;
 
+typedef struct {
+    uint8_t  it_version;     
+    uint8_t  it_pad;         
+    uint16_t it_len;         
+    uint32_t it_present;     
+} __attribute__((packed)) radiotap_header_t;
 
 #endif

@@ -2,6 +2,7 @@
 #include "utils/settings.h"
 #include "utils/802.11.h"
 #include "utils/frames.h"
+#include "utils/frame_queue.h"
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <stdio.h>
@@ -18,7 +19,7 @@
 #include <linux/wireless.h>
 #include <pthread.h>
 #include <unistd.h>
-
+#include <sys/uio.h>
 
 int create_rawsocket(int protocol)
 {
@@ -92,17 +93,13 @@ void* listen_mac_frames(void* data)
     uint8_t buffer[MAC_FRAME_SIZE]; //fine tune the buffer size to make mac frames fit inside
     ssize_t bytes; 
     printf("Started listening thread %ld\n", (unsigned long) pthread_self());
-    while (true)
+    while (context)
     {
         bytes = read(context->raw_socket, buffer, sizeof(buffer)); 
         if (bytes > 0)
         {
             parse_frame(buffer, bytes); 
-
-            if (filter_current_frame(&context->filters))
-            {
-                print_current_frame(); 
-            }
+            enqueue_frame(current_frame, current_frame_len);
         }
         else
         {
@@ -112,4 +109,31 @@ void* listen_mac_frames(void* data)
     }
 
     return NULL;
+}
+
+
+int send_mac_frame(int raw_socket, mac_frame_t* frame, int frame_len)
+{
+    uint16_t bytes; 
+    radiotap_header_t rt_header;
+    struct iovec iovecs[2]; 
+
+    //add radiotap header before sending raw mac frame
+    memset(&rt_header, 0, sizeof(radiotap_header_t));
+    rt_header.it_version = 0;
+    rt_header.it_pad     = 0;
+    rt_header.it_len     = sizeof(radiotap_header_t); 
+    rt_header.it_present = 0;
+
+    iovecs[0].iov_base = &rt_header; 
+    iovecs[0].iov_len = sizeof(radiotap_header_t);
+    iovecs[1].iov_base = frame;
+    iovecs[1].iov_len = frame_len;
+
+
+    if ((bytes = writev(raw_socket, iovecs, 2)) != (frame_len + sizeof(radiotap_header_t)))
+    {
+        return -1; 
+    }
+    return bytes; 
 }

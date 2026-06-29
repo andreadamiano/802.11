@@ -23,6 +23,7 @@ struct filters
 typedef struct
 {
     int raw_socket; 
+    volatile bool running; 
     struct filters filters;
 }socket_context_t;
 
@@ -31,5 +32,6 @@ int create_rawsocket(int protocol);
 int bind_rawsocket(char* ifname, int raw_socket, int protocol);
 int set_channel(int raw_socket, const char* ifname, int channel); 
 void* listen_mac_frames(void* data);
+int send_mac_frame(int raw_socket, mac_frame_t* frame, int frame_len); 
 
 #endif
