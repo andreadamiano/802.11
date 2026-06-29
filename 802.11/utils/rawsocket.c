@@ -88,16 +88,21 @@ int set_channel(int raw_socket, const char* ifname, int channel)
 
 void* listen_mac_frames(void* data)
 {
-    int* raw_socket = ((int *) data); 
+    socket_context_t* context = (socket_context_t *) data; 
     uint8_t buffer[MAC_FRAME_SIZE]; //fine tune the buffer size to make mac frames fit inside
     ssize_t bytes; 
-    printf("started new thread %ld\n", (unsigned long) pthread_self());
+    printf("Started listening thread %ld\n", (unsigned long) pthread_self());
     while (true)
     {
-        bytes = read(*raw_socket, buffer, sizeof(buffer)); 
-        if (bytes > 0 )
+        bytes = read(context->raw_socket, buffer, sizeof(buffer)); 
+        if (bytes > 0)
         {
-            print_frame(buffer, bytes);
+            parse_frame(buffer, bytes); 
+
+            if (filter_current_frame(&context->filters))
+            {
+                print_current_frame(); 
+            }
         }
         else
         {

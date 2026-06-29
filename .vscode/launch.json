@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C/C++ Debugger",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/main",
+      "args": ["wlxc8787d94fb10", "FASTWEB-D"],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false, 
+      "MIMode": "gdb",
+      "miDebuggerPath": "${workspaceFolder}/gdb-sudo.sh"
+    }
+  ]
+}

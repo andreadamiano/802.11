@@ -6,6 +6,11 @@
 // #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include "utils/rawsocket.h"
+#include <string.h>
+
+mac_frame_t* current_frame; 
+uint16_t current_frame_len; 
 
 // int send_probe_request(const char* ssid){
 
@@ -102,23 +107,11 @@ uint8_t get_fixed_params_length(frame_control_t fc)
     }
 }
 
-void print_frame(uint8_t* buffer, uint16_t buffer_len)
+void print_current_frame()
 {
-    if (buffer == NULL || buffer_len < 4) {
-        return;
-    }
-
-    //handle the radiotap header
-    uint16_t radiotap_len = *(uint16_t *)(buffer + 2);
-    if (radiotap_len >= buffer_len) {
-        return; 
-    }
-
-    mac_frame_t* frame = (mac_frame_t*)(buffer + radiotap_len);
-    uint16_t frame_len = buffer_len - radiotap_len;
 
     //parse the 802.11 header
-    frame_control_t fc = frame->header.frame_control;
+    frame_control_t fc = current_frame->header.frame_control;
 
     printf("============ FRAME CONTROL ============\n");
     printf("Protocol Version : %u\n", fc.protocol_version);
@@ -135,29 +128,29 @@ void print_frame(uint8_t* buffer, uint16_t buffer_len)
     
     printf("============ ADDRESS FIELDS ============\n");
     printf("Address 1: %02X:%02X:%02X:%02X:%02X:%02X\n",
-           frame->header.address1.addr[0], frame->header.address1.addr[1],
-           frame->header.address1.addr[2], frame->header.address1.addr[3],
-           frame->header.address1.addr[4], frame->header.address1.addr[5]);
+           current_frame->header.address1.addr[0], current_frame->header.address1.addr[1],
+           current_frame->header.address1.addr[2], current_frame->header.address1.addr[3],
+           current_frame->header.address1.addr[4], current_frame->header.address1.addr[5]);
            
     printf("Address 2: %02X:%02X:%02X:%02X:%02X:%02X\n",
-           frame->header.address2.addr[0], frame->header.address2.addr[1],
-           frame->header.address2.addr[2], frame->header.address2.addr[3],
-           frame->header.address2.addr[4], frame->header.address2.addr[5]);
+           current_frame->header.address2.addr[0], current_frame->header.address2.addr[1],
+           current_frame->header.address2.addr[2], current_frame->header.address2.addr[3],
+           current_frame->header.address2.addr[4], current_frame->header.address2.addr[5]);
 
     printf("Address 3: %02X:%02X:%02X:%02X:%02X:%02X\n",
-           frame->header.address3.addr[0], frame->header.address3.addr[1],
-           frame->header.address3.addr[2], frame->header.address3.addr[3],
-           frame->header.address3.addr[4], frame->header.address3.addr[5]);
+           current_frame->header.address3.addr[0], current_frame->header.address3.addr[1],
+           current_frame->header.address3.addr[2], current_frame->header.address3.addr[3],
+           current_frame->header.address3.addr[4], current_frame->header.address3.addr[5]);
 
     printf("============ PAYLOAD ============\n");
     
-    uint8_t fixed_params_length = get_fixed_params_length(frame->header.frame_control);
-    uint8_t* ch = frame->payload + fixed_params_length; //the header is 24 bytes long + 12 bytes of probe response paramters
-    uint8_t* frame_end = (uint8_t* )frame + frame_len - 4; //get an hard boundary (to avoid that corrupted mac frames can make the program read past the buffer)
+    uint8_t fixed_params_length = get_fixed_params_length(current_frame->header.frame_control);
+    uint8_t* ch = current_frame->payload + fixed_params_length; //the header is 24 bytes long + 12 bytes of probe response paramters
+    uint8_t* frame_end = (uint8_t* )current_frame + current_frame_len; //get an hard boundary (to avoid that corrupted mac frames can make the program read past the buffer)
     
     //subtract the CRC field
-    if (frame_len > 4) {
-        frame_len -= 4; 
+    if (current_frame_len > 4) {
+        frame_end -= 4; 
     }
 
     while (ch + 2 <= frame_end)
@@ -189,18 +182,23 @@ int16_t get_tag(mac_frame_t* frame, uint16_t frame_len, uint8_t tag, uint8_t** c
 {
     int8_t fixed_params_length = get_fixed_params_length(frame->header.frame_control);
     uint8_t* ch = frame->payload + fixed_params_length;
-    uint8_t current_byte = 24 + fixed_params_length;  //the header is 24 bytes long + 12 bytes of probe response paramters
+    uint8_t* frame_end = (uint8_t* )frame + frame_len;
 
     //subtract the CRC field
     if (frame_len > 4)
     {
-        frame_len -= 4; 
+        frame_end -= 4; 
     }
 
-    while (current_byte < frame_len)
+    while (ch + 2 < frame_end)
     {
         uint8_t tag_number = *(ch++);
         uint8_t tag_length = *(ch++);
+
+        if (ch + tag_length > frame_end)
+        {
+            return -1; 
+        }
 
         if (tag_number == tag)
         {
@@ -209,9 +207,70 @@ int16_t get_tag(mac_frame_t* frame, uint16_t frame_len, uint8_t tag, uint8_t** c
         }
 
         ch += tag_length;
-        current_byte += tag_length + 2;
     }
 
     *content = NULL;
     return -1;
+}
+
+void parse_frame(uint8_t* buffer, uint16_t buffer_len)
+{
+    if (buffer == NULL || buffer_len < 4) {
+        return;
+    }
+
+    //handle the radiotap header
+    uint16_t radiotap_len = *(uint16_t *)(buffer + 2);
+    if (radiotap_len >= buffer_len) {
+        return; 
+    }
+
+    current_frame = (mac_frame_t*)(buffer + radiotap_len);
+    current_frame_len = buffer_len - radiotap_len;
+
+}
+
+bool filter_current_frame(struct filters* filters)
+{
+    uint8_t* content = NULL; 
+    int content_len = get_tag(current_frame, current_frame_len, filters->tag.key, &content);
+    bool result = false; 
+
+    if (filters->destination_mac_address[0] == 0xff || (strncmp(current_frame->header.address1.addr, filters->destination_mac_address, 6) == 0))
+    {
+        result = true;
+    }
+    else
+    {
+        return false; 
+    }
+
+    if (filters->destination_mac_address[0] == 0xff || (strncmp(current_frame->header.address2.addr, filters->source_address, 6) == 0))
+    {
+        result = true;
+    }
+    else
+    {
+        return false; 
+    }
+
+    if ( *((uint16_t*) &filters->header.frame_control) == 0xffff  || (*((uint16_t*) &current_frame->header.frame_control) == *((uint16_t*) &filters->header.frame_control)))
+    {
+        result = true;
+    }
+    else
+    {
+        return false; 
+    }
+
+    if (filters->tag.key == -1  || (content_len > 0 && content != NULL && (strncmp(content, filters->tag.value, content_len) == 0)))
+    {
+        result = true;
+    }
+    else
+    {
+        return false; 
+    }
+
+    return result; 
 }
