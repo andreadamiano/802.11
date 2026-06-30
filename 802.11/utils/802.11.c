@@ -19,7 +19,9 @@ int send_probe_request(int raw_socket, const char* ssid){
     uint8_t payload_len = 2 + ssid_len + 10;
     uint16_t frame_size = sizeof(mac_header_t) + payload_len;
     uint16_t bytes; 
-    mac_frame_t frame =  {0}; //zero initialize
+    mac_frame_t frame;
+    
+    memset(&frame, 0, sizeof(mac_frame_t)); //zero initialize
 
     frame.header.frame_control.protocol_version = 0;
     frame.header.frame_control.type             = 0; 
@@ -287,4 +289,34 @@ bool filter_frame(mac_frame_t* frame, uint16_t frame_len, struct filters* filter
     }
 
     return result; 
+}
+
+bool send_probe_request_with_response(int raw_socket, const char* ssid, mac_frame_t** response, uint16_t* response_len)
+{
+    pthread_mutex_lock(&socket_context.filter_mutex);
+
+    // define the filters to catch the response
+    socket_context.filters.tag.key = 0; 
+    strncpy(socket_context.filters.tag.value, ssid, strlen(ssid));
+    memset(&socket_context.filters.header, 0, sizeof(mac_header_t));
+    socket_context.filters.header.frame_control.subtype = 5; 
+    pthread_mutex_unlock(&socket_context.filter_mutex);
+
+    send_probe_request(raw_socket, ssid);
+
+    pthread_mutex_lock(&socket_context.filter_mutex);
+    while (!socket_context.match)
+    {
+        pthread_cond_wait(&socket_context.filter_cond, &socket_context.filter_mutex);
+    }
+    *response = &filtered_frame; //zero copy
+    *response_len = filtered_frame_len;
+    socket_context.match = false; //reset flag
+    pthread_mutex_unlock(&socket_context.filter_mutex);
+
+    //debug
+    printf("Response:\n");
+    print_frame(*response, *response_len);
+    
+    return true;
 }

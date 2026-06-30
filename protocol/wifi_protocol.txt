@@ -136,12 +136,21 @@ Network Card confgiurations:
         * sudo iw wlxc8787d94fb10 set monitor control 
         * sudo ip link set wlxc8787d94fb10 up
     
+    - put the NIC in promiscous mode:
+        * sudo ip link set wlxc8787d94fb10 promisc on
+    
     - put the NIC back in managed mode:
         * stop monitor mode: sudo airmon-ng stop wlp0s20f3mon
         * restart NetworkManager: sudo systemctl start NetworkManager
 
     - get info about a NIC:
         * iw dev wlxc8787d94fb10 info
+
+    - set channel: 
+        * sudo iw dev wlxc8787d94fb10 set channel 2 HT20
+
+    - scan network: 
+        * sudo iw dev wlp0s20f3 scan
 
 Filter for a specific MAC on wireshark:
     - wlan.addr == <MAC>

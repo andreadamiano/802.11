@@ -20,12 +20,12 @@ int ret;
 pthread_t listening_mac_thread_id; 
 int raw_socket;
 mac_frame_t* mac_frame; 
-socket_context_t socket_context; 
 
 
 int main (int argc, char* argv[])
 {
-    mac_frame_t* current_frame;
+    mac_frame_t* response;
+    uint16_t response_len;
 
     if (argc < 3)
     {
@@ -57,20 +57,15 @@ int main (int argc, char* argv[])
     }
 
     //launch a background thread listening for incoming mac frames in monitor mode
-    initialize_socket_context(&socket_context, raw_socket);
+    initialize_socket_context(raw_socket);
 
-    // socket_context.filters.tag.key = 0; 
-    // strncpy(socket_context.filters.tag.value, ssid, strlen(ssid));
-    // memset(&socket_context.filters.header, 0, sizeof(mac_header_t));
-    // socket_context.filters.header.frame_control.subtype = 5; 
-
-    if (pthread_create(&listening_mac_thread_id, NULL, &listen_mac_frames, (void*) &socket_context) != 0)
+    if (pthread_create(&listening_mac_thread_id, NULL, &listen_mac_frames, NULL) != 0)
     {
         perror("Creating listening thread"); 
         return -1; 
     }
     
-    if (send_probe_request(raw_socket, ssid) == -1)
+    if (!send_probe_request_with_response(raw_socket, ssid, &response, &response_len))
     {
         perror("Sending probe request"); 
         return -1; 

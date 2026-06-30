@@ -27,8 +27,13 @@ typedef struct
     volatile bool running; 
     struct filters filters;
     pthread_mutex_t filter_mutex; 
+    pthread_cond_t filter_cond; 
+    volatile bool match; 
 }socket_context_t;
 
+extern socket_context_t socket_context; 
+extern mac_frame_t filtered_frame; 
+extern uint16_t filtered_frame_len;
 
 int create_rawsocket(int protocol);
 int bind_rawsocket(char* ifname, int raw_socket, int protocol);
@@ -36,6 +41,6 @@ int set_channel(int raw_socket, const char* ifname, int channel);
 void* listen_mac_frames(void* data);  //producer which append to a circular buffer
 void* filter_mac_frames(void* data); //consumer
 int send_mac_frame(int raw_socket, mac_frame_t* frame, int frame_len); 
-void initialize_socket_context(socket_context_t* context ,int raw_socket); 
+void initialize_socket_context(int raw_socket); 
 
 #endif

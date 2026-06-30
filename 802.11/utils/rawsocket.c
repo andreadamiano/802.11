@@ -21,6 +21,10 @@
 #include <unistd.h>
 #include <sys/uio.h>
 
+socket_context_t socket_context;  //-1 will be considered a default so it will not be filtered
+mac_frame_t filtered_frame; 
+uint16_t filtered_frame_len;
+
 int create_rawsocket(int protocol)
 {
     int raw_socket;
@@ -89,22 +93,22 @@ int set_channel(int raw_socket, const char* ifname, int channel)
 
 void* listen_mac_frames(void* data)
 {
-    socket_context_t* context = (socket_context_t *) data; 
+    // socket_context_t* context = (socket_context_t *) data; 
     uint8_t buffer[MAC_FRAME_SIZE]; //fine tune the buffer size to make mac frames fit inside the buffer
     ssize_t bytes; 
     pthread_t filtering_mac_thread_id; 
 
     //start consumer
-    if (pthread_create(&filtering_mac_thread_id, NULL, &filter_mac_frames, (void*) context) != 0)
+    if (pthread_create(&filtering_mac_thread_id, NULL, &filter_mac_frames, NULL) != 0)
     {
         perror("Creating filtering thread"); 
         exit(-1); 
     }
 
-    printf("Started listening thread %ld\n", (unsigned long) pthread_self());
-    while (context->running)
+    printf("Started listening thread with ID: %ld\n", (unsigned long) pthread_self());
+    while (socket_context.running)
     {
-        bytes = read(context->raw_socket, buffer, sizeof(buffer)); 
+        bytes = read(socket_context.raw_socket, buffer, sizeof(buffer)); 
         if (bytes > 0)
         {
             parse_frame(buffer, bytes); 
@@ -113,7 +117,7 @@ void* listen_mac_frames(void* data)
         else
         {
             perror("While reading from raw socket");
-            break;
+            exit(-1);
         }
     }
 
@@ -155,32 +159,42 @@ int send_mac_frame(int raw_socket, mac_frame_t* frame, int frame_len)
 
 void* filter_mac_frames(void* data)
 {
-    socket_context_t* context = (socket_context_t* )data; 
+    // socket_context_t* context = (socket_context_t* )data; 
     mac_frame_t current_dequeued_frame;
     uint16_t frame_len;
 
-    printf("Started filtering thread %ld\n", (unsigned long) pthread_self());
-    while(context->running)
+    printf("Started filtering thread with ID: %ld\n", (unsigned long) pthread_self());
+    while(socket_context.running)
     {
-       if (dequeue_frame(&current_dequeued_frame, &frame_len))
-       {
-            //grab a mutex while reading the current filters (which can be modified asynchronously)
-            pthread_mutex_lock(&context->filter_mutex);
-            if (filter_frame(&current_dequeued_frame, frame_len, &context->filters))
-                print_frame(&current_dequeued_frame, frame_len); 
-            pthread_mutex_unlock(&context->filter_mutex);
+        if (dequeue_frame(&current_dequeued_frame, &frame_len))
+        {
+                //grab a mutex while reading the current filters (which can be modified asynchronously)
+                pthread_mutex_lock(&socket_context.filter_mutex);
+                if (filter_frame(&current_dequeued_frame, frame_len, &socket_context.filters))
+                {
+                    pthread_cond_signal(&socket_context.filter_cond);
+                    
+                    memset(&filtered_frame, 0, sizeof(mac_frame_t));
+                    memcpy(&filtered_frame, &current_dequeued_frame, frame_len);
+                    filtered_frame_len = frame_len;
+                    
+                    //signal to other threads that a match has been found
+                    socket_context.match = true;
+                    pthread_cond_signal(&socket_context.filter_cond);
+                    // print_frame(&current_dequeued_frame, frame_len); 
+                }
+                pthread_mutex_unlock(&socket_context.filter_mutex);
 
-       }
+        }
     }
 }
 
-void initialize_socket_context(socket_context_t* context, int raw_socket)
+void initialize_socket_context(int raw_socket)
 {
-    if (context == NULL) 
-        return;
-
-    memset(context, -1, sizeof(socket_context_t)); //-1 will be considered a default so it will not be filtered
-    context->raw_socket = raw_socket; 
-    context->running = true; 
-    pthread_mutex_init(&context->filter_mutex, NULL);
+    memset(&socket_context, -1, sizeof(socket_context_t)); //-1 will be considered a default so it will not be filtered
+    socket_context.raw_socket = raw_socket; 
+    socket_context.running = true; 
+    socket_context.match = false; 
+    pthread_mutex_init(&socket_context.filter_mutex, NULL);
+    pthread_cond_init(&socket_context.filter_cond, NULL);
 }
