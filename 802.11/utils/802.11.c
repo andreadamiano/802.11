@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 199309L
 #include "utils/frames.h"
 #include "utils/settings.h"
 #include "utils/802.11.h"
@@ -9,11 +10,13 @@
 #include "utils/rawsocket.h"
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
+#include <time.h>
 
 mac_frame_t* current_frame; 
 uint16_t current_frame_len; 
 
-int send_probe_request(int raw_socket, const char* ssid){
+int send_probe_request_to_ssid(int raw_socket, const char* ssid){
 
     uint8_t ssid_len = strlen(ssid);
     uint8_t payload_len = 2 + ssid_len + 10;
@@ -291,7 +294,7 @@ bool filter_frame(mac_frame_t* frame, uint16_t frame_len, struct filters* filter
     return result; 
 }
 
-bool send_probe_request_with_response(int raw_socket, const char* ssid, mac_frame_t** response, uint16_t* response_len)
+bool send_probe_request_to_ssid_with_response(int raw_socket, const char* ssid, mac_frame_t** response, uint16_t* response_len)
 {
     pthread_mutex_lock(&socket_context.filter_mutex);
 
@@ -302,12 +305,25 @@ bool send_probe_request_with_response(int raw_socket, const char* ssid, mac_fram
     socket_context.filters.header.frame_control.subtype = 5; 
     pthread_mutex_unlock(&socket_context.filter_mutex);
 
-    send_probe_request(raw_socket, ssid);
+    send_probe_request_to_ssid(raw_socket, ssid);
 
     pthread_mutex_lock(&socket_context.filter_mutex);
+
+    //initialize timeout
+    clock_gettime(CLOCK_REALTIME, &socket_context.ts); 
+    socket_context.ts.tv_sec += 2;
+
     while (!socket_context.match)
     {
-        pthread_cond_wait(&socket_context.filter_cond, &socket_context.filter_mutex);
+        //wait for a conditional with a timeout 
+        int rc = pthread_cond_timedwait(&socket_context.filter_cond, &socket_context.filter_mutex, &socket_context.ts);
+    
+        if (rc == ETIMEDOUT)
+        {
+            socket_context.match = false;
+            pthread_mutex_unlock(&socket_context.filter_mutex);
+            return false;
+        }
     }
     *response = &filtered_frame; //zero copy
     *response_len = filtered_frame_len;

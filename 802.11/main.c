@@ -26,6 +26,7 @@ int main (int argc, char* argv[])
 {
     mac_frame_t* response;
     uint16_t response_len;
+    int ssid_channel;
 
     if (argc < 3)
     {
@@ -64,12 +65,20 @@ int main (int argc, char* argv[])
         perror("Creating listening thread"); 
         return -1; 
     }
-    
-    if (!send_probe_request_with_response(raw_socket, ssid, &response, &response_len))
+
+
+    //scan channels to find the provided ssid
+    if (!scan_channels(raw_socket, ifname, ssid, &ssid_channel))
     {
-        perror("Sending probe request"); 
-        return -1; 
+        perror("SSID channel not found");
+        return -1;
     }
+    
+    // if (!send_probe_request_to_ssid_with_response(raw_socket, ssid, &response, &response_len))
+    // {
+    //     perror("Sending probe request"); 
+    //     return -1; 
+    // }
 
     //block main thread execution
     if (pthread_join(listening_mac_thread_id, NULL) != 0)

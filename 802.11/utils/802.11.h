@@ -9,8 +9,8 @@
 extern mac_frame_t* current_frame; 
 extern uint16_t current_frame_len;
 
-int send_probe_request(int raw_socket, const char* ssid);
-bool send_probe_request_with_response(int raw_socket, const char* ssid, mac_frame_t** response, uint16_t* response_len);
+int send_probe_request_to_ssid(int raw_socket, const char* ssid);
+bool send_probe_request_to_ssid_with_response(int raw_socket, const char* ssid, mac_frame_t** response, uint16_t* response_len);
 void print_frame(mac_frame_t* frame, uint16_t frame_len); 
 void parse_frame(uint8_t* buffer, uint16_t buffer_len); 
 int16_t get_tag(mac_frame_t* frame, uint16_t frame_len, uint8_t tag, uint8_t** content);  

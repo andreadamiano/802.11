@@ -6,6 +6,7 @@
 #include "utils/settings.h"
 #include "utils/frames.h"
 #include <pthread.h>
+#include <time.h>
 
 struct tag
 {
@@ -29,6 +30,7 @@ typedef struct
     pthread_mutex_t filter_mutex; 
     pthread_cond_t filter_cond; 
     volatile bool match; 
+    struct timespec ts;
 }socket_context_t;
 
 extern socket_context_t socket_context; 
@@ -42,5 +44,6 @@ void* listen_mac_frames(void* data);  //producer which append to a circular buff
 void* filter_mac_frames(void* data); //consumer
 int send_mac_frame(int raw_socket, mac_frame_t* frame, int frame_len); 
 void initialize_socket_context(int raw_socket); 
+bool scan_channels(int raw_socket, const char* ifname, const char* ssid, int* found_channel);
 
 #endif

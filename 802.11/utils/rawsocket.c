@@ -198,3 +198,23 @@ void initialize_socket_context(int raw_socket)
     pthread_mutex_init(&socket_context.filter_mutex, NULL);
     pthread_cond_init(&socket_context.filter_cond, NULL);
 }
+
+bool scan_channels(int raw_socket, const char* ifname, const char* ssid, int* found_channel)
+{
+    mac_frame_t* response;
+    uint16_t response_len;
+
+    for (int channel = 0; channel < 13; ++channel)
+    {
+        set_channel(raw_socket, ifname, channel);
+        if (send_probe_request_to_ssid_with_response(raw_socket, ssid, &response, &response_len))
+        {
+            *found_channel = channel;
+
+            //debug 
+            printf("Found channel: %d\n", *found_channel);
+            return true;
+        }
+    }
+    return false;
+}
