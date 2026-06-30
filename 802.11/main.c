@@ -74,11 +74,15 @@ int main (int argc, char* argv[])
         return -1;
     }
     
-    // if (!send_probe_request_to_ssid_with_response(raw_socket, ssid, &response, &response_len))
-    // {
-    //     perror("Sending probe request"); 
-    //     return -1; 
-    // }
+    if (!send_probe_request_to_ssid_with_response(raw_socket, ssid, &response, &response_len))
+    {
+        perror("Sending probe request"); 
+        return -1; 
+    }
+
+    //retrieve the ssid mac
+    memcpy(&remote_mac, &response->header.address2.addr, MAC_LEN);
+    
 
     //block main thread execution
     if (pthread_join(listening_mac_thread_id, NULL) != 0)
