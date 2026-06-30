@@ -150,7 +150,7 @@ Network Card confgiurations:
         * sudo iw dev wlxc8787d94fb10 set channel 2 HT20
 
     - scan network: 
-        * sudo iw dev wlp0s20f3 scan
+        * sudo iw dev wlp0s20f3 scan | grep -E "SSID:|DS Parameter"
 
 Filter for a specific MAC on wireshark:
     - wlan.addr == <MAC>
