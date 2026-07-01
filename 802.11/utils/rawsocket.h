@@ -18,8 +18,8 @@ struct filters
 {
     mac_header_t header; 
     struct tag tag;  
-    uint8_t destination_mac_address[MAC_LEN];
-    uint8_t source_address[MAC_LEN];
+    // uint8_t destination_mac_address[MAC_LEN];
+    // uint8_t source_address[MAC_LEN];
 };
 
 typedef struct
@@ -46,5 +46,6 @@ void* filter_mac_frames(void* data); //consumer
 int send_mac_frame(int raw_socket, mac_frame_t* frame, int frame_len); 
 void initialize_socket_context(int raw_socket); 
 bool scan_ssid_channel(int raw_socket, const char* ifname, const char* ssid, int* found_channel);
+void initialize_filters(); 
 
 #endif

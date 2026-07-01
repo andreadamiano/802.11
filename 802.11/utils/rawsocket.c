@@ -192,7 +192,7 @@ void* filter_mac_frames(void* data)
 
 void initialize_socket_context(int raw_socket)
 {
-    memset(&socket_context, -1, sizeof(socket_context_t)); //-1 will be considered a default so it will not be filtered
+    initialize_filters();
     socket_context.raw_socket = raw_socket; 
     socket_context.running = true; 
     socket_context.match = false; 
@@ -218,4 +218,10 @@ bool scan_ssid_channel(int raw_socket, const char* ifname, const char* ssid, int
         }
     }
     return false;
+}
+
+void initialize_filters()
+{
+    memset(&socket_context.filters, -1, sizeof(struct filters)); 
+    memset(&socket_context.filters.header.frame_control, 0, sizeof(frame_control_t));
 }

@@ -153,6 +153,42 @@ void print_frame(mac_frame_t* frame, uint16_t frame_len)
             frame_end -= 4; 
         }
 
+        if (fixed_params_length > 0)
+        {
+            printf("--------- FIXED PARAMETERS ---------\n");
+            
+            if (frame->header.frame_control.subtype == 11) //authentication frame
+            {
+                uint16_t algo = *(uint16_t*)&frame->payload[0];
+                uint16_t seq  = *(uint16_t*)&frame->payload[2];
+                uint16_t stat = *(uint16_t*)&frame->payload[4];
+                
+                printf("Auth Algorithm : %d\n", algo);
+                printf("Auth Sequence  : %d\n", seq);
+                printf("Auth Status    : %d\n", stat);
+            }
+            else if (frame->header.frame_control.subtype == 5 || frame->header.frame_control.subtype == 8) //probe response or beacon frame
+            {
+                uint64_t timestamp = *(uint64_t*)&frame->payload[0];
+                uint16_t interval  = *(uint16_t*)&frame->payload[8];
+                uint16_t cap_info  = *(uint16_t*)&frame->payload[10];
+                
+                printf("Timestamp      : %lu\n", timestamp);
+                printf("Beacon Interval: %d\n", interval);
+                printf("Capability Info: 0x%04X\n", cap_info);
+            }
+            else
+            {
+                //fallback to raw hex dump
+                printf("Raw Bytes (%d): ", fixed_params_length);
+                for (int i = 0; i < fixed_params_length; i++) {
+                    printf("%02X ", frame->payload[i]);
+                }
+                printf("\n");
+            }
+            printf("-------------------------------------\n");
+        }
+
         while (ch + 2 <= frame_end)
         {
             uint8_t tag_number = *(ch++);
@@ -255,7 +291,7 @@ bool filter_frame(mac_frame_t* frame, uint16_t frame_len, struct filters* filter
     int content_len = get_tag(frame, frame_len, filters->tag.key, &content);
     bool result = false; 
 
-    if (filters->destination_mac_address[0] == 0xff || (strncmp(frame->header.address1.addr, filters->destination_mac_address, 6) == 0))
+    if (filters->header.address1.addr[0] == 0xff || (strncmp(frame->header.address1.addr, filters->header.address1.addr, 6) == 0))
     {
         result = true;
     }
@@ -264,7 +300,7 @@ bool filter_frame(mac_frame_t* frame, uint16_t frame_len, struct filters* filter
         return false; 
     }
 
-    if (filters->destination_mac_address[0] == 0xff || (strncmp(frame->header.address2.addr, filters->source_address, 6) == 0))
+    if (filters->header.address2.addr[0] == 0xff || (strncmp(frame->header.address2.addr, filters->header.address2.addr, 6) == 0))
     {
         result = true;
     }
@@ -299,10 +335,9 @@ bool send_probe_request_to_ssid_with_response(int raw_socket, const char* ssid, 
     pthread_mutex_lock(&socket_context.filter_mutex);
 
     // define the filters to catch the response
-    memset(&socket_context.filters, -1, sizeof(struct filters)); //initialize filters
+    initialize_filters();
     socket_context.filters.tag.key = 0; 
     strncpy(socket_context.filters.tag.value, ssid, strlen(ssid));
-    memset(&socket_context.filters.header, 0, sizeof(mac_header_t));
     socket_context.filters.header.frame_control.subtype = 5; 
     pthread_mutex_unlock(&socket_context.filter_mutex);
 
@@ -332,7 +367,7 @@ bool send_probe_request_to_ssid_with_response(int raw_socket, const char* ssid, 
     pthread_mutex_unlock(&socket_context.filter_mutex);
 
     //debug
-    printf("Response:\n");
+    printf("Response to probe request:\n");
     print_frame(*response, *response_len);
     
     return true;
@@ -380,11 +415,10 @@ int send_authentication_to_bssid_with_response(int raw_socket, const char* bssid
     pthread_mutex_lock(&socket_context.filter_mutex);
 
     // define the filters to catch the response
-    memset(&socket_context.filters, -1, sizeof(struct filters)); //initialize filters
-    memset(&socket_context.filters.header, 0, sizeof(mac_header_t));
+    initialize_filters();
     socket_context.filters.header.frame_control.subtype = 11;
-    // memcpy(socket_context.filters.header.address1.addr, spoofed_mac_address, MAC_LEN); 
-    // memcpy(socket_context.filters.header.address2.addr, bssid, MAC_LEN); 
+    memcpy(socket_context.filters.header.address1.addr, spoofed_mac_address, MAC_LEN); 
+    memcpy(socket_context.filters.header.address2.addr, bssid, MAC_LEN); 
 
     pthread_mutex_unlock(&socket_context.filter_mutex);
 
@@ -414,7 +448,7 @@ int send_authentication_to_bssid_with_response(int raw_socket, const char* bssid
     pthread_mutex_unlock(&socket_context.filter_mutex);
 
     //debug
-    printf("Response:\n");
+    printf("Response to authentication request:\n");
     print_frame(*response, *response_len);
     
     return true;
