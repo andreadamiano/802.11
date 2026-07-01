@@ -24,6 +24,7 @@
 socket_context_t socket_context;  //-1 will be considered a default so it will not be filtered
 mac_frame_t filtered_frame; 
 uint16_t filtered_frame_len;
+uint8_t spoofed_mac_address[MAC_LEN] = {SPOOF_MAC_ADDRESS};
 
 int create_rawsocket(int protocol)
 {
@@ -199,7 +200,7 @@ void initialize_socket_context(int raw_socket)
     pthread_cond_init(&socket_context.filter_cond, NULL);
 }
 
-bool scan_channels(int raw_socket, const char* ifname, const char* ssid, int* found_channel)
+bool scan_ssid_channel(int raw_socket, const char* ifname, const char* ssid, int* found_channel)
 {
     mac_frame_t* response;
     uint16_t response_len;

@@ -1,7 +1,7 @@
 #ifndef SETTINGS
 #define SETTINGS
 
-#define SPOOF_MAC_ADDRESS  0x010203040506ULL  //mac address stored as little endian
+#define SPOOF_MAC_ADDRESS  0x06, 0x05, 0x04, 0x03, 0x02, 0x01 //mac address stored as little endian
 #define MAX_FRAME_SIZE 2048
 #define MAX_FRAME_PAYLOAD 2048
 #define SSID "FASTWEB-D"

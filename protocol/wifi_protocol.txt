@@ -26,7 +26,7 @@ Media Access Control (MAC) Layer 2 sublayer:
         - PCF: Point coordination, which resides inside access points, poll every station of the networks, once at a time,  for new data. Point coordination can transmit frames after a shorter time, this allow them to gain precedence over other stations.
 
         - Physical carrier-sensing and virtual carrier-sensing is adopted to detect if the medium (air) is busy. 
-            *  RF transceiver are almost always half duplex, since it's very expensive to trasmit and receive at the same time.
+            * RF transceiver are almost always half duplex, since it's very expensive to trasmit and receive at the same time.
             * Virtual carrier-sensing is provided by the Network Allocation Vector (NAV). Every frame has a NAV field, when a station hear a packet it reads the NAv and sleep for that period of time before trying to transmit again.
             To ensure a frame transmission is not interrupted the NAV is sent inside the RTS frame. The AP receiving the RTS will respond with a CTS with a shorter time NAV.   
 

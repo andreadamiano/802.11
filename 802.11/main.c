@@ -13,8 +13,8 @@
 
 //global states
 char ifname[16]; //name of the network interface
-unsigned int local_mac[MAC_LEN];
-unsigned int remote_mac[MAC_LEN];
+unsigned char local_mac[MAC_LEN];
+unsigned char bssid[MAC_LEN];
 char ssid[16];
 int ret; 
 pthread_t listening_mac_thread_id; 
@@ -66,9 +66,8 @@ int main (int argc, char* argv[])
         return -1; 
     }
 
-
     //scan channels to find the provided ssid
-    if (!scan_channels(raw_socket, ifname, ssid, &ssid_channel))
+    if (!scan_ssid_channel(raw_socket, ifname, ssid, &ssid_channel))
     {
         perror("SSID channel not found");
         return -1;
@@ -80,8 +79,14 @@ int main (int argc, char* argv[])
         return -1; 
     }
 
-    //retrieve the ssid mac
-    memcpy(&remote_mac, &response->header.address2.addr, MAC_LEN);
+    //retrieve the bssid of the AP
+    memcpy(&bssid, &response->header.address2.addr, MAC_LEN);
+
+    if (!send_authentication_to_bssid_with_response(raw_socket, bssid, &response, &response_len))
+    {
+        perror("Sending authentication request"); 
+        return -1; 
+    }
     
 
     //block main thread execution

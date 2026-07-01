@@ -36,6 +36,7 @@ typedef struct
 extern socket_context_t socket_context; 
 extern mac_frame_t filtered_frame; 
 extern uint16_t filtered_frame_len;
+extern uint8_t spoofed_mac_address[];
 
 int create_rawsocket(int protocol);
 int bind_rawsocket(char* ifname, int raw_socket, int protocol);
@@ -44,6 +45,6 @@ void* listen_mac_frames(void* data);  //producer which append to a circular buff
 void* filter_mac_frames(void* data); //consumer
 int send_mac_frame(int raw_socket, mac_frame_t* frame, int frame_len); 
 void initialize_socket_context(int raw_socket); 
-bool scan_channels(int raw_socket, const char* ifname, const char* ssid, int* found_channel);
+bool scan_ssid_channel(int raw_socket, const char* ifname, const char* ssid, int* found_channel);
 
 #endif

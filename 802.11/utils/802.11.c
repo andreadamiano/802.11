@@ -27,12 +27,12 @@ int send_probe_request_to_ssid(int raw_socket, const char* ssid){
     memset(&frame, 0, sizeof(mac_frame_t)); //zero initialize
 
     frame.header.frame_control.protocol_version = 0;
-    frame.header.frame_control.type             = 0; 
-    frame.header.frame_control.subtype          = 4; // Probe Request    
+    frame.header.frame_control.type             = 0; //management frame
+    frame.header.frame_control.subtype          = 4; //probe Request    
     frame.header.duration_id = 0x0000;
-    memset(frame.header.address1.addr, 0xFF, 6); // Destination: Broadcast
-    memcpy(frame.header.address2.addr, &(uint64_t){SPOOF_MAC_ADDRESS}, 6); // Source: SPOOFED MAC
-    memset(frame.header.address3.addr, 0xFF, 6); // BSSID: Broadcast
+    memset(frame.header.address1.addr, 0xFF, MAC_LEN); //destination: broadcast
+    memcpy(frame.header.address2.addr, spoofed_mac_address, MAC_LEN); //source: spoofed MAC
+    memset(frame.header.address3.addr, 0xFF, MAC_LEN); //final destination: broadcast
     frame.header.sequence_control.fragment_number = 0;
     frame.header.sequence_control.sequence_number = 0;
 
@@ -71,32 +71,32 @@ uint8_t get_fixed_params_length(frame_control_t fc)
     }
 
     switch (fc.subtype) {
-        case 0:  // Association Request
+        case 0:  //association request
             return 4;   
             
-        case 1:  // Association Response
-        case 3:  // Reassociation Response
+        case 1:  //association response
+        case 3:  //reassociation response
             return 6;   
             
-        case 2:  // Reassociation Request
+        case 2:  //reassociation request
             return 10;  
             
-        case 4:  // Probe Request
-        case 9:  // ATIM Frame
+        case 4:  //probe request
+        case 9:  //ATIM frame
             return 0;   
             
-        case 5:  // Probe Response
-        case 8:  // Beacon Frame
+        case 5:  //probe response
+        case 8:  //beacon frame
             return 12;  
             
-        case 10: // Disassociation
-        case 12: // Deauthentication
+        case 10: //disassociation
+        case 12: //deauthentication
             return 2;   
             
-        case 11: // Authentication
+        case 11: //authentication
             return 6;   
             
-        case 13: // Action Frame
+        case 13: //action frame
             return 0; 
 
         default:
@@ -299,6 +299,7 @@ bool send_probe_request_to_ssid_with_response(int raw_socket, const char* ssid, 
     pthread_mutex_lock(&socket_context.filter_mutex);
 
     // define the filters to catch the response
+    memset(&socket_context.filters, -1, sizeof(struct filters)); //initialize filters
     socket_context.filters.tag.key = 0; 
     strncpy(socket_context.filters.tag.value, ssid, strlen(ssid));
     memset(&socket_context.filters.header, 0, sizeof(mac_header_t));
@@ -306,6 +307,88 @@ bool send_probe_request_to_ssid_with_response(int raw_socket, const char* ssid, 
     pthread_mutex_unlock(&socket_context.filter_mutex);
 
     send_probe_request_to_ssid(raw_socket, ssid);
+
+    pthread_mutex_lock(&socket_context.filter_mutex);
+
+    //initialize timeout
+    clock_gettime(CLOCK_REALTIME, &socket_context.ts); 
+    socket_context.ts.tv_sec += 2;
+
+    while (!socket_context.match)
+    {
+        //wait for a conditional with a timeout 
+        int rc = pthread_cond_timedwait(&socket_context.filter_cond, &socket_context.filter_mutex, &socket_context.ts);
+    
+        if (rc == ETIMEDOUT)
+        {
+            socket_context.match = false;
+            pthread_mutex_unlock(&socket_context.filter_mutex);
+            return false;
+        }
+    }
+    *response = &filtered_frame; //zero copy
+    *response_len = filtered_frame_len;
+    socket_context.match = false; //reset flag
+    pthread_mutex_unlock(&socket_context.filter_mutex);
+
+    //debug
+    printf("Response:\n");
+    print_frame(*response, *response_len);
+    
+    return true;
+}
+
+int send_authentication_to_bssid(int raw_socket, const char* bssid)
+{
+    uint16_t frame_size = sizeof(mac_header_t) + 6;
+    uint16_t bytes; 
+    mac_frame_t frame;
+    
+    memset(&frame, 0, sizeof(mac_frame_t)); //zero initialize
+
+    frame.header.frame_control.protocol_version = 0;
+    frame.header.frame_control.type             = 0; //management frame
+    frame.header.frame_control.subtype          = 11; //authentication request
+    frame.header.duration_id = 0x0000;
+    memcpy(frame.header.address1.addr, bssid, MAC_LEN); //destination: bssid
+    memcpy(frame.header.address2.addr, spoofed_mac_address, MAC_LEN); //source: spoofed MAC
+    memcpy(frame.header.address3.addr, bssid, MAC_LEN); //final destination: broadcast
+    frame.header.sequence_control.fragment_number = 0;
+    frame.header.sequence_control.sequence_number = 0;
+
+    uint8_t payload_index = 0;
+
+    //algorithm
+    frame.payload[payload_index++] = 0;
+    frame.payload[payload_index++] = 0;
+
+    //sequence
+    frame.payload[payload_index++] = 1; //little endian order
+    frame.payload[payload_index++] = 0;
+
+    //status code
+    frame.payload[payload_index++] = 0;
+    frame.payload[payload_index++] = 0;
+
+    //send mac frame
+    bytes = send_mac_frame(raw_socket, &frame, frame_size);     
+    return bytes;
+}
+
+int send_authentication_to_bssid_with_response(int raw_socket, const char* bssid, mac_frame_t** response, uint16_t* response_len)
+{
+    pthread_mutex_lock(&socket_context.filter_mutex);
+
+    // define the filters to catch the response
+    memset(&socket_context.filters, -1, sizeof(struct filters)); //initialize filters
+    memset(&socket_context.filters.header, 0, sizeof(mac_header_t));
+    socket_context.filters.header.frame_control.subtype = 11;
+    // memcpy(socket_context.filters.header.address1.addr, spoofed_mac_address, MAC_LEN); 
+    // memcpy(socket_context.filters.header.address2.addr, bssid, MAC_LEN); 
+
+    pthread_mutex_unlock(&socket_context.filter_mutex);
+
+    send_authentication_to_bssid(raw_socket, bssid);
 
     pthread_mutex_lock(&socket_context.filter_mutex);
 
