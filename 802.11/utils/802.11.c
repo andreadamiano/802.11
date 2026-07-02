@@ -15,6 +15,7 @@
 
 mac_frame_t* current_frame; 
 uint16_t current_frame_len; 
+bool has_fcs;
 
 int send_probe_request_to_ssid(int raw_socket, const char* ssid){
 
@@ -149,7 +150,7 @@ void print_frame(mac_frame_t* frame, uint16_t frame_len)
         uint8_t* frame_end = (uint8_t* )frame + frame_len; //get an hard boundary (to avoid that corrupted mac frames can make the program read past the buffer)
         
         //subtract the CRC field
-        if (frame_len > 4) {
+        if (frame_len > 4 && has_fcs) {
             frame_end -= 4; 
         }
 
@@ -220,7 +221,7 @@ void print_frame(mac_frame_t* frame, uint16_t frame_len)
         uint8_t* frame_end = (uint8_t* )frame + frame_len; //get an hard boundary (to avoid that corrupted mac frames can make the program read past the buffer)
 
         //subtract the CRC field
-        if (frame_len > 4) {
+        if (frame_len > 4 && has_fcs) {
             frame_end -= 4; 
         }
 
@@ -240,7 +241,7 @@ int16_t get_tag(mac_frame_t* frame, uint16_t frame_len, uint8_t tag, uint8_t** c
     uint8_t* frame_end = (uint8_t* )frame + frame_len;
 
     //subtract the CRC field
-    if (frame_len > 4)
+    if (frame_len > 4 && has_fcs)
     {
         frame_end -= 4; 
     }
@@ -270,7 +271,7 @@ int16_t get_tag(mac_frame_t* frame, uint16_t frame_len, uint8_t tag, uint8_t** c
 
 void parse_frame(uint8_t* buffer, uint16_t buffer_len)
 {
-    if (buffer == NULL || buffer_len < 4) {
+    if (buffer == NULL || buffer_len < 8) {
         return;
     }
 
@@ -278,6 +279,40 @@ void parse_frame(uint8_t* buffer, uint16_t buffer_len)
     uint16_t radiotap_len = *(uint16_t *)(buffer + 2);
     if (radiotap_len >= buffer_len) {
         return; 
+    }
+
+    radiotap_header_t* rt_header = (radiotap_header_t*) buffer;
+    uint8_t* p = (uint8_t*)rt_header + 8; //go past to the fixed part of the radiotap header
+    
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Waddress-of-packed-member"
+    uint32_t* current_it_present =(uint32_t*) (&rt_header->it_present);
+    #pragma GCC diagnostic pop
+    
+    //if 31 bit is set to one there could be more it_present fields
+    while (*current_it_present & (1U <<31))
+    {
+        current_it_present +=1;
+        p += 4;
+    }
+
+    //check if TSFT is present (signaled by bit 0 of the it_present filed)
+    if (rt_header->it_present & 1)
+    {   
+        uintptr_t off = p - (uint8_t*)rt_header;
+        off = (off + 7) & ~7;              // round up to next multiple of 8
+        p = (uint8_t*)rt_header + off;
+
+        p += 8;  //skip the TSFT data
+    }
+
+    if (rt_header->it_present & (1 << 1)) //flag field is present
+    {         
+        if (p < buffer + radiotap_len) 
+        {  
+            uint8_t flags = *p;
+            has_fcs = (flags & 0x10) != 0; //bit 4 signal if the CRC is present or not
+        }
     }
 
     current_frame = (mac_frame_t*)(buffer + radiotap_len);

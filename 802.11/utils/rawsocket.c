@@ -84,8 +84,8 @@ int set_channel(int raw_socket, const char* ifname, int channel)
     //sending request using the configured struct 
     if (ioctl(raw_socket, SIOCSIWFREQ, &iwreq) == -1)
     {
-        perror("While setting network interface channel");
-        return -1; 
+        perror("Setting network interface channel");
+        // return -1; 
     }
 
     return 0; 
@@ -182,7 +182,7 @@ void* filter_mac_frames(void* data)
                     //signal to other threads that a match has been found
                     socket_context.match = true;
                     pthread_cond_signal(&socket_context.filter_cond);
-                    // print_frame(&current_dequeued_frame, frame_len); 
+                    print_frame(&current_dequeued_frame, frame_len); 
                 }
                 pthread_mutex_unlock(&socket_context.filter_mutex);
 
@@ -207,7 +207,11 @@ bool scan_ssid_channel(int raw_socket, const char* ifname, const char* ssid, int
 
     for (int channel = 0; channel < 13; ++channel)
     {
-        set_channel(raw_socket, ifname, channel);
+        if (set_channel(raw_socket, ifname, channel) == -1)
+        {
+            return false;
+        }
+
         if (send_probe_request_to_ssid_with_response(raw_socket, ssid, &response, &response_len))
         {
             *found_channel = channel;
@@ -223,5 +227,5 @@ bool scan_ssid_channel(int raw_socket, const char* ifname, const char* ssid, int
 void initialize_filters()
 {
     memset(&socket_context.filters, -1, sizeof(struct filters)); 
-    memset(&socket_context.filters.header.frame_control, 0, sizeof(frame_control_t));
+    // memset(&socket_context.filters.header.frame_control, 0, sizeof(frame_control_t));
 }

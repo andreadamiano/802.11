@@ -8,6 +8,7 @@
 
 extern mac_frame_t* current_frame; 
 extern uint16_t current_frame_len;
+extern bool has_fcs;
 
 int send_probe_request_to_ssid(int raw_socket, const char* ssid);
 bool send_probe_request_to_ssid_with_response(int raw_socket, const char* ssid, mac_frame_t** response, uint16_t* response_len);

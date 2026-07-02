@@ -67,26 +67,26 @@ int main (int argc, char* argv[])
     }
 
     //scan channels to find the provided ssid
-    if (!scan_ssid_channel(raw_socket, ifname, ssid, &ssid_channel))
-    {
-        perror("SSID channel not found");
-        return -1;
-    }
+    // if (!scan_ssid_channel(raw_socket, ifname, ssid, &ssid_channel))
+    // {
+    //     perror("SSID channel not found");
+    //     return -1;
+    // }
     
-    if (!send_probe_request_to_ssid_with_response(raw_socket, ssid, &response, &response_len))
-    {
-        perror("Sending probe request"); 
-        return -1; 
-    }
+    // if (!send_probe_request_to_ssid_with_response(raw_socket, ssid, &response, &response_len))
+    // {
+    //     perror("Sending probe request"); 
+    //     return -1; 
+    // }
 
-    //retrieve the bssid of the AP
-    memcpy(&bssid, &response->header.address2.addr, MAC_LEN);
+    // //retrieve the bssid of the AP
+    // memcpy(&bssid, &response->header.address2.addr, MAC_LEN);
 
-    if (!send_authentication_to_bssid_with_response(raw_socket, bssid, &response, &response_len))
-    {
-        perror("Sending authentication request"); 
-        return -1; 
-    }
+    // if (!send_authentication_to_bssid_with_response(raw_socket, bssid, &response, &response_len))
+    // {
+    //     perror("Sending authentication request"); 
+    //     return -1; 
+    // }
     
 
     //block main thread execution

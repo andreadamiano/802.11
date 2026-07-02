@@ -8,6 +8,15 @@ if [ "$#" -ne 1 ]; then
 fi
 
 ip link set $NIC down
-iw $NIC set monitor control 
-ip link set wlxc8787d94fb10 promisc on
+# iw $NIC set monitor active
+iw $NIC set monitor control
+
+if [ $? -ne 0 ]; then
+iw $NIC set monitor control
+fi
+
+ip link set $NIC promisc on
 ip link set $NIC up
+
+info=$(iw dev $NIC info)
+echo "$info"
