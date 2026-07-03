@@ -375,6 +375,10 @@ bool send_probe_request_to_ssid_with_response(int raw_socket, const char* ssid, 
     strncpy(socket_context.filters.tag.value, ssid, strlen(ssid));
     memset(&socket_context.filters.header.frame_control, 0, sizeof(frame_control_t));
     socket_context.filters.header.frame_control.subtype = 5; 
+    memcpy(socket_context.filters.header.address1.addr, spoofed_mac_address, MAC_LEN); 
+
+    //reset flag atomically before sending request
+    socket_context.match = false;
     pthread_mutex_unlock(&socket_context.filter_mutex);
 
     send_probe_request_to_ssid(raw_socket, ssid);
