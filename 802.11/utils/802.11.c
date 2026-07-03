@@ -236,6 +236,11 @@ void print_frame(mac_frame_t* frame, uint16_t frame_len)
 
 int16_t get_tag(mac_frame_t* frame, uint16_t frame_len, uint8_t tag, uint8_t** content)
 {
+    if (tag == -1)
+    {
+        return -1;
+    }
+    
     int8_t fixed_params_length = get_fixed_params_length(frame->header.frame_control);
     uint8_t* ch = frame->payload + fixed_params_length;
     uint8_t* frame_end = (uint8_t* )frame + frame_len;
@@ -387,7 +392,7 @@ bool send_probe_request_to_ssid_with_response(int raw_socket, const char* ssid, 
 
     //initialize timeout
     clock_gettime(CLOCK_REALTIME, &socket_context.ts); 
-    socket_context.ts.tv_sec += 2;
+    socket_context.ts.tv_sec += REQUEST_TIMEOUT;
 
     while (!socket_context.match)
     {
@@ -456,10 +461,13 @@ int send_authentication_to_bssid_with_response(int raw_socket, const char* bssid
 
     // define the filters to catch the response
     initialize_filters();
+    memset(&socket_context.filters.header.frame_control, 0, sizeof(frame_control_t));
     socket_context.filters.header.frame_control.subtype = 11;
-    memcpy(socket_context.filters.header.address1.addr, spoofed_mac_address, MAC_LEN); 
-    memcpy(socket_context.filters.header.address2.addr, bssid, MAC_LEN); 
+    // memcpy(socket_context.filters.header.address1.addr, spoofed_mac_address, MAC_LEN); 
+    // memcpy(socket_context.filters.header.address2.addr, bssid, MAC_LEN); 
 
+    //reset flag atomically before sending request
+    socket_context.match = false;
     pthread_mutex_unlock(&socket_context.filter_mutex);
 
     send_authentication_to_bssid(raw_socket, bssid);
@@ -468,7 +476,7 @@ int send_authentication_to_bssid_with_response(int raw_socket, const char* bssid
 
     //initialize timeout
     clock_gettime(CLOCK_REALTIME, &socket_context.ts); 
-    socket_context.ts.tv_sec += 2;
+    socket_context.ts.tv_sec += REQUEST_TIMEOUT;
 
     while (!socket_context.match)
     {

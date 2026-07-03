@@ -11,5 +11,6 @@
 #define KiB(n) ((uint64_t)(n) << 10)  //1024
 #define MiB(n) ((uint64_t)(n) << 20)  //1048576 
 #define GiB(n) ((uint64_t)(n) << 30) //1073741824
+#define REQUEST_TIMEOUT 5
 
 #endif
