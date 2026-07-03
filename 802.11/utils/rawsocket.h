@@ -25,6 +25,7 @@ struct filters
 typedef struct
 {
     int raw_socket; 
+    int if_index; 
     volatile bool running; 
     struct filters filters;
     pthread_mutex_t filter_mutex; 

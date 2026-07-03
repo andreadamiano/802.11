@@ -1,6 +1,6 @@
-CC = gcc -O3 -I$(SOURCE_DIR)
-CCFLAGS = 
-LDFLAGS = 
+CC = gcc 
+CCFLAGS = -O3 -I$(SOURCE_DIR) $(shell pkg-config --cflags libnl-3.0 libnl-genl-3.0) #include the netlink headers  
+LDFLAGS = $(shell pkg-config --libs libnl-3.0 libnl-genl-3.0) 
 DEBUGFLAGS = -g -O0
 BUILD_DIR = build
 SOURCE_DIR = 802.11

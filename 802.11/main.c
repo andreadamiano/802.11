@@ -36,16 +36,7 @@ int main (int argc, char* argv[])
 
     //parse command line arguments
     strncpy(ifname, argv[1], strlen(argv[1]));
-
-    // ret = sscanf(argv[2], "%02x:%02x:%02x:%02x:%02x:%02x", &remote_mac[0], &remote_mac[1], &remote_mac[2], &remote_mac[3], &remote_mac[4], &remote_mac[5]);
-    // if (ret < 6)
-    // {
-    //     perror("Remote mac MUST be in human readable form like 01:02:03:04:05:06\r\n");
-    //     return -1;
-    // }
-
     strncpy(ssid, argv[2], strlen(argv[2]));
-
 
     if ((raw_socket = create_rawsocket(ETH_P_ALL)) == -1)
     {
@@ -67,11 +58,11 @@ int main (int argc, char* argv[])
     }
 
     //scan channels to find the provided ssid
-    // if (!scan_ssid_channel(raw_socket, ifname, ssid, &ssid_channel))
-    // {
-    //     perror("SSID channel not found");
-    //     return -1;
-    // }
+    if (!scan_ssid_channel(raw_socket, ifname, ssid, &ssid_channel))
+    {
+        printf("SSID channel not found");
+        return -1;
+    }
     
     // if (!send_probe_request_to_ssid_with_response(raw_socket, ssid, &response, &response_len))
     // {

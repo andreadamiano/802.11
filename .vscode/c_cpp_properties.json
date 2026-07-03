@@ -23,7 +23,8 @@
                 "${workspaceFolder}/**",
                 "/usr/include/**",
                 "/usr/local/include",
-                "/usr/local/lib"
+                "/usr/local/lib",
+                "/usr/include/libnl3"
             ],
             "defines": [
                 "_DEBUG",

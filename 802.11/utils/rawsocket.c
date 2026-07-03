@@ -20,6 +20,11 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <sys/uio.h>
+#include <netlink/netlink.h>
+#include <netlink/genl/genl.h>
+#include <netlink/genl/ctrl.h>
+#include <linux/nl80211.h>
+#include <unistd.h>
 
 socket_context_t socket_context;  //-1 will be considered a default so it will not be filtered
 mac_frame_t filtered_frame; 
@@ -50,9 +55,12 @@ int bind_rawsocket(char* ifname, int raw_socket, int protocol)
     strncpy( (char*) ifr.ifr_name, ifname, IFNAMSIZ);
     if (ioctl(raw_socket, SIOCGIFINDEX, &ifr) == -1)
     {
-        perror("Getting interface inde");
+        perror("Getting interface index");
         return -1; 
     }
+
+    //save interface index
+    socket_context.if_index = ifr.ifr_ifindex;
 
     //bind socket to the network interface
     sll.sll_family = AF_PACKET;
@@ -71,24 +79,95 @@ int bind_rawsocket(char* ifname, int raw_socket, int protocol)
 
 int set_channel(int raw_socket, const char* ifname, int channel)
 {
-    struct iwreq iwreq; //struct used to receive/set configuration on wireless devices via ioctl
+    // struct iwreq iwreq; //struct used to receive/set configuration on wireless devices via ioctl
 
-    memset(&iwreq, 0, sizeof(iwreq)); 
+    // memset(&iwreq, 0, sizeof(iwreq)); 
 
-    //initialize iwreq structure
-    strncpy(iwreq.ifr_name, ifname, strlen(ifname));
-    iwreq.u.freq.m = channel; 
-    iwreq.u.freq.e = 0; 
-    iwreq.u.freq.flags = IW_FREQ_FIXED; 
+    // //initialize iwreq structure
+    // strncpy(iwreq.ifr_name, ifname, strlen(ifname));
+    // iwreq.u.freq.m = channel; 
+    // iwreq.u.freq.e = 0; 
+    // iwreq.u.freq.flags = IW_FREQ_FIXED; 
 
-    //sending request using the configured struct 
-    if (ioctl(raw_socket, SIOCSIWFREQ, &iwreq) == -1)
+    // //sending request using the configured struct 
+    // if (ioctl(raw_socket, SIOCSIWFREQ, &iwreq) == -1)
+    // {
+    //     perror("Setting network interface channel");
+    //     // return -1; 
+    // }
+
+    // return 0; 
+
+    int frequency_mhz = channel_to_freq(channel);
+
+    if (frequency_mhz == 0)
     {
-        perror("Setting network interface channel");
-        // return -1; 
+        perror("Inavalid wifi channel");
+        return -1;
     }
 
-    return 0; 
+    //create and connect Netlink socket
+    //Netlink socket are used as a form of interporcess communication with the kernel space
+    //over this sockets messages will be sent to the kernel, which will communicate with the NIC, using the appropriate driver
+    struct nl_sock* nl_socket = nl_socket_alloc();
+
+    if (!nl_socket)
+    {
+        perror("Allocating Netlink socket");
+        return -1; 
+    }
+
+    if (genl_connect(nl_socket) < 0)
+    {
+        perror("Connecting to Netlink socket");
+        return -1; 
+    }
+
+    //resolve to which subsystem ID we want our socket to comunicate
+    int family_id = genl_ctrl_resolve(nl_socket, "nl80211");
+    if (family_id < 0) 
+    {
+        fprintf(stderr, "nl80211 interface not found in kernel\n");
+        nl_socket_free(nl_socket);
+        return -1;
+    }
+
+    //allocate nl message
+    struct nl_msg *nl_message = nlmsg_alloc();
+    if (!nl_message)
+    {
+        perror("Allocating nl message");
+        nl_socket_free(nl_socket);
+        return -1; 
+    }
+
+    //assemble command header
+    genlmsg_put(nl_message, 0, 0, genl_ctrl_resolve(nl_socket, "nl80211"), 0, 0, NL80211_CMD_SET_WIPHY, 0);
+
+    //compone message to change the frequency of the NIC
+    NLA_PUT_U32(nl_message, NL80211_ATTR_IFINDEX, socket_context.if_index);
+    NLA_PUT_U32(nl_message, NL80211_ATTR_WIPHY_FREQ, frequency_mhz);
+    NLA_PUT_U32(nl_message, NL80211_ATTR_WIPHY_CHANNEL_TYPE, NL80211_CHAN_NO_HT);
+
+    //send message
+    int ret = nl_send_auto_complete(nl_socket, nl_message);
+    if (ret < 0)
+    {
+        perror("Sending Netlink message");
+        return -1; 
+    }
+    
+
+    nlmsg_free(nl_message);
+    nl_socket_free(nl_socket);
+    return 0;
+
+    nla_put_failure:
+        nlmsg_free(nl_message);
+        nl_socket_free(nl_socket);
+        printf("PUT Failure\n");
+        return 1;
+
 }
 
 
@@ -182,7 +261,7 @@ void* filter_mac_frames(void* data)
                     //signal to other threads that a match has been found
                     socket_context.match = true;
                     pthread_cond_signal(&socket_context.filter_cond);
-                    print_frame(&current_dequeued_frame, frame_len); 
+                    // print_frame(&current_dequeued_frame, frame_len); 
                 }
                 pthread_mutex_unlock(&socket_context.filter_mutex);
 
@@ -205,8 +284,11 @@ bool scan_ssid_channel(int raw_socket, const char* ifname, const char* ssid, int
     mac_frame_t* response;
     uint16_t response_len;
 
-    for (int channel = 0; channel < 13; ++channel)
+    sleep(1);
+
+    for (int channel = 1; channel < 14; ++channel)
     {
+        printf("Scanning channel: %d\n", channel);
         if (set_channel(raw_socket, ifname, channel) == -1)
         {
             return false;

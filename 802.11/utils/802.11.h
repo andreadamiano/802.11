@@ -18,5 +18,6 @@ void print_frame(mac_frame_t* frame, uint16_t frame_len);
 void parse_frame(uint8_t* buffer, uint16_t buffer_len); 
 int16_t get_tag(mac_frame_t* frame, uint16_t frame_len, uint8_t tag, uint8_t** content);  
 bool filter_frame(mac_frame_t* frame, uint16_t frame_len, struct filters* filters);
+int channel_to_freq(int channel);
 
 #endif

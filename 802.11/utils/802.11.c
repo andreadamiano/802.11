@@ -373,6 +373,7 @@ bool send_probe_request_to_ssid_with_response(int raw_socket, const char* ssid, 
     initialize_filters();
     socket_context.filters.tag.key = 0; 
     strncpy(socket_context.filters.tag.value, ssid, strlen(ssid));
+    memset(&socket_context.filters.header.frame_control, 0, sizeof(frame_control_t));
     socket_context.filters.header.frame_control.subtype = 5; 
     pthread_mutex_unlock(&socket_context.filter_mutex);
 
@@ -487,4 +488,27 @@ int send_authentication_to_bssid_with_response(int raw_socket, const char* bssid
     print_frame(*response, *response_len);
     
     return true;
+}
+
+int channel_to_freq(int channel) 
+{
+    
+    //2.4 GHz Band
+    if (channel >= 1 && channel <= 13) 
+    {
+        return 2407 + (channel * 5);
+    }
+
+    //only for Japan
+    else if (channel == 14) {
+        return 2484;
+    }
+    
+    //5 GHz Band
+    if (channel >= 32 && channel <= 177) {
+        return 5000 + (channel * 5);
+    }
+
+    //invalid channel
+    return 0; 
 }
