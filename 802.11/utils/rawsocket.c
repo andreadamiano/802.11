@@ -286,23 +286,28 @@ bool scan_ssid_channel(int raw_socket, const char* ifname, const char* ssid, int
 
     sleep(1);
 
-    for (int channel = 1; channel < 14; ++channel)
+    while (true)
     {
-        printf("Scanning channel: %d\n", channel);
-        if (set_channel(raw_socket, ifname, channel) == -1)
+  
+        for (int channel = 1; channel < 14; ++channel)
         {
-            return false;
-        }
+            printf("Scanning channel: %d\n", channel);
+            if (set_channel(raw_socket, ifname, channel) == -1)
+            {
+                return false;
+            }
 
-        if (send_probe_request_to_ssid_with_response(raw_socket, ssid, &response, &response_len))
-        {
-            *found_channel = channel;
+            if (send_probe_request_to_ssid_with_response(raw_socket, ssid, &response, &response_len, false))
+            {
+                *found_channel = channel;
 
-            //debug 
-            printf("Found channel: %d\n", *found_channel);
-            return true;
+                //debug 
+                printf("Found channel: %d\n", *found_channel);
+                return true;
+            }
         }
     }
+    
     return false;
 }
 

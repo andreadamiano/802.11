@@ -63,32 +63,34 @@ int main (int argc, char* argv[])
         printf("SSID channel not found");
         return -1;
     }
-    
-    if (!send_probe_request_to_ssid_with_response(raw_socket, ssid, &response, &response_len))
-    {
-        perror("Sending probe request"); 
-        return -1; 
-    }
 
-    //retrieve the bssid of the AP
-    memcpy(&bssid, &response->header.address2.addr, MAC_LEN);
-
-    for (int i = 0; i < 3; ++i)
+    while (true)
     {
+        //to capture the PMKID we need the AP to complete its 802.11 state machine transition
+        //only once the AP has moved the client into state 3 it will start the 4-way handshake
+        
+        if (!send_probe_request_to_ssid_with_response(raw_socket, ssid, &response, &response_len, true))
+        {
+            printf("Did not receive any response to the probe request\n"); 
+            continue; 
+        }
+
+        //retrieve the bssid of the AP
+        memcpy(&bssid, &response->header.address2.addr, MAC_LEN);
+
         if (!send_authentication_to_bssid_with_response(raw_socket, bssid, &response, &response_len))
         {
-            printf("Did not receive any answer to the authentication request\n"); 
+            printf("Did not receive any response to the authentication request\n"); 
+            continue;
         }
-        else break;
-    }
-
-    for (int i = 0; i < 3; ++i)
-    {
+            
         if (!send_association_to_bssid_with_response(raw_socket, ssid, bssid, &response, &response_len))
         {
-            printf("Did not receive any answer to the association request\n"); 
+            printf("Did not receive any response to the association request\n"); 
+            continue;;
         }
         else break;
+    
     }
 
     //block main thread execution

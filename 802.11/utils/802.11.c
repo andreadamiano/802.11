@@ -404,7 +404,7 @@ bool filter_frame(mac_frame_t* frame, uint16_t frame_len, struct filters* filter
     return result; 
 }
 
-bool send_probe_request_to_ssid_with_response(int raw_socket, const char* ssid, mac_frame_t** response, uint16_t* response_len)
+bool send_probe_request_to_ssid_with_response(int raw_socket, const char* ssid, mac_frame_t** response, uint16_t* response_len, bool verbose)
 {
     pthread_mutex_lock(&socket_context.filter_mutex);
 
@@ -446,9 +446,12 @@ bool send_probe_request_to_ssid_with_response(int raw_socket, const char* ssid, 
     pthread_mutex_unlock(&socket_context.filter_mutex);
 
     //debug
-    printf("Response to probe request:\n");
-    print_frame(*response, *response_len);
-    
+    if (verbose)
+    {
+        printf("Response to probe request:\n");
+        print_frame(*response, *response_len);
+    }
+
     return true;
 }
 

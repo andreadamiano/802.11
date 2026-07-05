@@ -11,7 +11,7 @@ extern uint16_t current_frame_len;
 extern bool has_fcs;
 
 int send_probe_request_to_ssid(int raw_socket, const char* ssid);
-bool send_probe_request_to_ssid_with_response(int raw_socket, const char* ssid, mac_frame_t** response, uint16_t* response_len);
+bool send_probe_request_to_ssid_with_response(int raw_socket, const char* ssid, mac_frame_t** response, uint16_t* response_len, bool verbose);
 int send_authentication_to_bssid(int raw_socket, const char* bssid);
 int send_authentication_to_bssid_with_response(int raw_socket, const char* bssid, mac_frame_t** response, uint16_t* response_len);
 int send_association_to_bssid(int raw_socket, const char* ssid, const char* bssid);
