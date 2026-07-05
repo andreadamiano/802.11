@@ -178,6 +178,40 @@ void print_frame(mac_frame_t* frame, uint16_t frame_len)
                 printf("Beacon Interval: %d\n", interval);
                 printf("Capability Info: 0x%04X\n", cap_info);
             }
+            else if (frame->header.frame_control.subtype == 1 || frame->header.frame_control.subtype == 3) //association or reassociation response
+            {
+                uint16_t cap_info = *(uint16_t*)&frame->payload[0];
+                uint16_t status   = *(uint16_t*)&frame->payload[2];
+                uint16_t aid       = *(uint16_t*)&frame->payload[4];
+
+                printf("Capability Info: 0x%04X\n", cap_info);
+                printf("Status Code    : %d\n", status);
+                printf("Association ID : 0x%04X\n", aid & 0x3FFF); 
+            }
+            else if (frame->header.frame_control.subtype == 0) //association request
+            {
+                uint16_t cap_info = *(uint16_t*)&frame->payload[0];
+                uint16_t listen   = *(uint16_t*)&frame->payload[2];
+
+                printf("Capability Info : 0x%04X\n", cap_info);
+                printf("Listen Interval : %d\n", listen);
+            }
+            else if (frame->header.frame_control.subtype == 2) //reassociation request
+            {
+                uint16_t cap_info = *(uint16_t*)&frame->payload[0];
+                uint16_t listen   = *(uint16_t*)&frame->payload[2];
+
+                printf("Capability Info      : 0x%04X\n", cap_info);
+                printf("Listen Interval      : %d\n", listen);
+                printf("Current AP Address   : %02X:%02X:%02X:%02X:%02X:%02X\n",
+                    frame->payload[4], frame->payload[5], frame->payload[6],
+                    frame->payload[7], frame->payload[8], frame->payload[9]);
+            }
+            else if (frame->header.frame_control.subtype == 10 || frame->header.frame_control.subtype == 12) //disassoc/deauth
+            {
+                uint16_t reason = *(uint16_t*)&frame->payload[0];
+                printf("Reason Code : %d\n", reason);
+            }
             else
             {
                 //fallback to raw hex dump
@@ -463,8 +497,8 @@ int send_authentication_to_bssid_with_response(int raw_socket, const char* bssid
     initialize_filters();
     memset(&socket_context.filters.header.frame_control, 0, sizeof(frame_control_t));
     socket_context.filters.header.frame_control.subtype = 11;
-    // memcpy(socket_context.filters.header.address1.addr, spoofed_mac_address, MAC_LEN); 
-    // memcpy(socket_context.filters.header.address2.addr, bssid, MAC_LEN); 
+    memcpy(socket_context.filters.header.address1.addr, spoofed_mac_address, MAC_LEN); 
+    memcpy(socket_context.filters.header.address2.addr, bssid, MAC_LEN); 
 
     //reset flag atomically before sending request
     socket_context.match = false;
@@ -523,4 +557,136 @@ int channel_to_freq(int channel)
 
     //invalid channel
     return 0; 
+}
+
+int send_association_to_bssid(int raw_socket, const char* ssid, const char* bssid)
+{
+    uint16_t bytes; 
+    mac_frame_t frame;
+    
+    memset(&frame, 0, sizeof(mac_frame_t)); //zero initialize
+
+    frame.header.frame_control.protocol_version = 0;
+    frame.header.frame_control.type             = 0; //management frame
+    frame.header.frame_control.subtype          = 0; //association request
+    frame.header.duration_id = 0x0000;
+    memcpy(frame.header.address1.addr, bssid, MAC_LEN); //destination: bssid
+    memcpy(frame.header.address2.addr, spoofed_mac_address, MAC_LEN); //source: spoofed MAC
+    memcpy(frame.header.address3.addr, bssid, MAC_LEN); //final destination: bssid
+    frame.header.sequence_control.fragment_number = 0;
+    frame.header.sequence_control.sequence_number = 0;
+
+    uint16_t payload_index = 0;
+
+    //capability info
+    frame.payload[payload_index++] = 0x31; //standard WPA2 client capabilities
+    frame.payload[payload_index++] = 0x04;
+
+    //listen interval
+    frame.payload[payload_index++] = 0x0a; //listen every 10 beacon
+    frame.payload[payload_index++] = 0x00;
+
+    //TLV parametrs
+    uint8_t ssid_len = strlen(ssid); //ssid 
+    frame.payload[payload_index++] = 0;     
+    frame.payload[payload_index++] = ssid_len; 
+    memcpy(&frame.payload[payload_index], ssid, ssid_len);
+    
+    payload_index += ssid_len;
+
+    frame.payload[payload_index++] = 1;    //supported rates
+    frame.payload[payload_index++] = 4;    
+    frame.payload[payload_index++] = 0x82; 
+    frame.payload[payload_index++] = 0x84; 
+    frame.payload[payload_index++] = 0x8b; 
+    frame.payload[payload_index++] = 0x96; 
+
+    frame.payload[payload_index++] = 0x30;  //robust security network information
+    frame.payload[payload_index++] = 0x14;
+    frame.payload[payload_index++] = 0x01;        //RSN version, low byte
+    frame.payload[payload_index++] = 0x00;        //RSN version, high byte
+    
+    //group cipher suite: AES 
+    frame.payload[payload_index++] = 0x00;        
+    frame.payload[payload_index++] = 0x0f;        
+    frame.payload[payload_index++] = 0xac;        
+    frame.payload[payload_index++] = 0x04;        
+    
+    //pairwise cipher suite count: 1
+    frame.payload[payload_index++] = 0x01;        
+    frame.payload[payload_index++] = 0x00;        
+    
+    //pairwise cipher suite list: AES 
+    frame.payload[payload_index++] = 0x00;        
+    frame.payload[payload_index++] = 0x0f;        
+    frame.payload[payload_index++] = 0xac;        
+    frame.payload[payload_index++] = 0x04;        
+    
+    //auth key management (AKM) suite count: 1
+    frame.payload[payload_index++] = 0x01;        
+    frame.payload[payload_index++] = 0x00;        
+    
+    //auth key management suite: PSK 
+    frame.payload[payload_index++] = 0x00;        
+    frame.payload[payload_index++] = 0x0f;        
+    frame.payload[payload_index++] = 0xac;        
+    frame.payload[payload_index++] = 0x02;        
+    
+    //RSN capabilities 
+    frame.payload[payload_index++] = 0x00;        
+    frame.payload[payload_index++] = 0x00;
+
+   
+    uint16_t frame_size = (uint16_t) sizeof(mac_header_t) + payload_index;
+
+    //send mac frame
+    bytes = send_mac_frame(raw_socket, &frame, frame_size);     
+    return bytes;
+}
+
+int send_association_to_bssid_with_response(int raw_socket, const char* ssid, const char* bssid, mac_frame_t** response, uint16_t* response_len)
+{
+    pthread_mutex_lock(&socket_context.filter_mutex);
+
+    // define the filters to catch the response
+    initialize_filters();
+    memset(&socket_context.filters.header.frame_control, 0, sizeof(frame_control_t));
+    socket_context.filters.header.frame_control.subtype = 1;
+    memcpy(socket_context.filters.header.address1.addr, spoofed_mac_address, MAC_LEN); 
+    memcpy(socket_context.filters.header.address2.addr, bssid, MAC_LEN); 
+
+    //reset flag atomically before sending request
+    socket_context.match = false;
+    pthread_mutex_unlock(&socket_context.filter_mutex);
+
+    send_association_to_bssid(raw_socket, ssid, bssid);
+
+    pthread_mutex_lock(&socket_context.filter_mutex);
+
+    //initialize timeout
+    clock_gettime(CLOCK_REALTIME, &socket_context.ts); 
+    socket_context.ts.tv_sec += REQUEST_TIMEOUT;
+
+    while (!socket_context.match)
+    {
+        //wait for a conditional with a timeout 
+        int rc = pthread_cond_timedwait(&socket_context.filter_cond, &socket_context.filter_mutex, &socket_context.ts);
+    
+        if (rc == ETIMEDOUT)
+        {
+            socket_context.match = false;
+            pthread_mutex_unlock(&socket_context.filter_mutex);
+            return false;
+        }
+    }
+    *response = &filtered_frame; //zero copy
+    *response_len = filtered_frame_len;
+    socket_context.match = false; //reset flag
+    pthread_mutex_unlock(&socket_context.filter_mutex);
+
+    //debug
+    printf("Response to association request:\n");
+    print_frame(*response, *response_len);
+    
+    return true;
 }

@@ -73,12 +73,23 @@ int main (int argc, char* argv[])
     //retrieve the bssid of the AP
     memcpy(&bssid, &response->header.address2.addr, MAC_LEN);
 
-    if (!send_authentication_to_bssid_with_response(raw_socket, bssid, &response, &response_len))
+    for (int i = 0; i < 3; ++i)
     {
-        perror("Sending authentication request"); 
-        return -1; 
+        if (!send_authentication_to_bssid_with_response(raw_socket, bssid, &response, &response_len))
+        {
+            printf("Did not receive any answer to the authentication request\n"); 
+        }
+        else break;
     }
-    
+
+    for (int i = 0; i < 3; ++i)
+    {
+        if (!send_association_to_bssid_with_response(raw_socket, ssid, bssid, &response, &response_len))
+        {
+            printf("Did not receive any answer to the association request\n"); 
+        }
+        else break;
+    }
 
     //block main thread execution
     if (pthread_join(listening_mac_thread_id, NULL) != 0)

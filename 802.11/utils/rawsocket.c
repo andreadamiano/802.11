@@ -261,7 +261,7 @@ void* filter_mac_frames(void* data)
                     //signal to other threads that a match has been found
                     socket_context.match = true;
                     pthread_cond_signal(&socket_context.filter_cond);
-                    print_frame(&current_dequeued_frame, frame_len); 
+                    // print_frame(&current_dequeued_frame, frame_len); 
                 }
                 pthread_mutex_unlock(&socket_context.filter_mutex);
 
