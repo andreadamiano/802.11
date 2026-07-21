@@ -163,6 +163,8 @@ Docs:
     - https://www.opensourceforu.com/2015/03/a-guide-to-using-raw-sockets/
     - https://docs.kernel.org/
     - https://github.com/ZerBea/hcxdumptool/discussions/379
+    - https://www.infradead.org/~tgr/libnl/doc/api/group__core.html
+    - https://docs.kernel.org/userspace-api/netlink/intro.html#opening-a-socket
 
 
 
