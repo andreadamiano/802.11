@@ -252,8 +252,6 @@ void* filter_mac_frames(void* data)
                 pthread_mutex_lock(&socket_context.filter_mutex);
                 if (filter_frame(&current_dequeued_frame, frame_len, &socket_context.filters))
                 {
-                    pthread_cond_signal(&socket_context.filter_cond);
-                    
                     memset(&filtered_frame, 0, sizeof(mac_frame_t));
                     memcpy(&filtered_frame, &current_dequeued_frame, frame_len);
                     filtered_frame_len = frame_len;
