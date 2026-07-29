@@ -12,5 +12,14 @@
 #define MiB(n) ((uint64_t)(n) << 20)  //1048576 
 #define GiB(n) ((uint64_t)(n) << 30) //1073741824
 #define REQUEST_TIMEOUT 5
+#define LOGGER_LEVEL INFO
+
+
+enum log_level
+{
+    DEBUG, 
+    INFO, 
+    ERROR
+};
 
 #endif

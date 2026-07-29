@@ -259,7 +259,7 @@ void* filter_mac_frames(void* data)
                     //signal to other threads that a match has been found
                     socket_context.match = true;
                     pthread_cond_signal(&socket_context.filter_cond);
-                    // print_frame(&current_dequeued_frame, frame_len); 
+                    print_frame(&current_dequeued_frame, frame_len, DEBUG); 
                 }
                 pthread_mutex_unlock(&socket_context.filter_mutex);
 
@@ -275,6 +275,7 @@ void initialize_socket_context(int raw_socket)
     socket_context.match = false; 
     pthread_mutex_init(&socket_context.filter_mutex, NULL);
     pthread_cond_init(&socket_context.filter_cond, NULL);
+    initalize_queue(MiB(10));
 }
 
 bool scan_ssid_channel(int raw_socket, const char* ifname, const char* ssid, int* found_channel)

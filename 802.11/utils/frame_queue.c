@@ -1,5 +1,6 @@
 #include "utils/frame_queue.h"
 #include <memory.h>
+#include <stdlib.h>
 
 static frame_queue_t frame_queue = {0}; 
 
@@ -46,4 +47,9 @@ bool dequeue_frame(mac_frame_t* frame, uint16_t* frame_len)
     *frame_len = node->frame_len;
     pthread_mutex_unlock(&frame_queue.mutex);
     return true; 
+}
+
+void initalize_queue(size_t queue_size)
+{
+    frame_queue.nodes = (queue_node*) malloc(queue_size * sizeof(queue_node));
 }

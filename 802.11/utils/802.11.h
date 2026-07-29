@@ -16,7 +16,7 @@ int send_authentication_to_bssid(int raw_socket, const char* bssid);
 int send_authentication_to_bssid_with_response(int raw_socket, const char* bssid, mac_frame_t** response, uint16_t* response_len);
 int send_association_to_bssid(int raw_socket, const char* ssid, const char* bssid);
 int send_association_to_bssid_with_response(int raw_socket, const char* ssid, const char* bssid, mac_frame_t** response, uint16_t* response_len);
-void print_frame(mac_frame_t* frame, uint16_t frame_len); 
+void print_frame(mac_frame_t* frame, uint16_t frame_len, enum log_level level); 
 void parse_frame(uint8_t* buffer, uint16_t buffer_len); 
 int16_t get_tag(mac_frame_t* frame, uint16_t frame_len, uint8_t tag, uint8_t** content);  
 bool filter_frame(mac_frame_t* frame, uint16_t frame_len, struct filters* filters);

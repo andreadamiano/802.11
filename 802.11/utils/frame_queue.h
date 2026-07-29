@@ -19,11 +19,12 @@ typedef struct
     uint16_t tail;
     pthread_mutex_t mutex;
     pthread_cond_t cond;
-    queue_node nodes[FRAME_QUEUE_SIZE];  //queue ring
+    queue_node* nodes;  //queue ring, allocated on the heap to avoid stack overflow
 }frame_queue_t;
 
 void enqueue_frame(mac_frame_t* frame, uint16_t frame_len); 
 bool dequeue_frame(mac_frame_t* frame, uint16_t* frame_len);
+void initalize_queue(size_t queue_size); 
 
 
 #endif

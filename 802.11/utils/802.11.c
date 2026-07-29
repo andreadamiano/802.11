@@ -2,12 +2,12 @@
 #include "utils/frames.h"
 #include "utils/settings.h"
 #include "utils/802.11.h"
+#include "utils/rawsocket.h"
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include "utils/rawsocket.h"
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
@@ -105,8 +105,13 @@ uint8_t get_fixed_params_length(frame_control_t fc)
     }
 }
 
-void print_frame(mac_frame_t* frame, uint16_t frame_len)
+void print_frame(mac_frame_t* frame, uint16_t frame_len, enum log_level level)
 {
+
+    if (level < LOGGER_LEVEL)
+    {
+        return;
+    }
 
     //parse the 802.11 header
     frame_control_t fc = frame->header.frame_control;
@@ -449,7 +454,7 @@ bool send_probe_request_to_ssid_with_response(int raw_socket, const char* ssid, 
     if (verbose)
     {
         printf("Response to probe request:\n");
-        print_frame(*response, *response_len);
+        print_frame(*response, *response_len, INFO);
     }
 
     return true;
@@ -534,7 +539,7 @@ int send_authentication_to_bssid_with_response(int raw_socket, const char* bssid
 
     //debug
     printf("Response to authentication request:\n");
-    print_frame(*response, *response_len);
+    print_frame(*response, *response_len, INFO);
     
     return true;
 }
@@ -651,7 +656,7 @@ int send_association_to_bssid_with_response(int raw_socket, const char* ssid, co
 {
     pthread_mutex_lock(&socket_context.filter_mutex);
 
-    // define the filters to catch the response
+    //define the filters to catch the response
     initialize_filters();
     memset(&socket_context.filters.header.frame_control, 0, sizeof(frame_control_t));
     socket_context.filters.header.frame_control.subtype = 1;
@@ -689,7 +694,7 @@ int send_association_to_bssid_with_response(int raw_socket, const char* ssid, co
 
     //debug
     printf("Response to association request:\n");
-    print_frame(*response, *response_len);
+    print_frame(*response, *response_len, LOGGER_LEVEL);
     
     return true;
 }
