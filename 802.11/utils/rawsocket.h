@@ -30,6 +30,7 @@ typedef struct
     struct filters filters;
     pthread_mutex_t filter_mutex; 
     pthread_cond_t filter_cond; 
+    volatile bool dequeue;
     volatile bool match; 
     struct timespec ts;
 }socket_context_t;

@@ -71,7 +71,7 @@ int main (int argc, char* argv[])
         
         if (!send_probe_request_to_ssid_with_response(raw_socket, ssid, &response, &response_len, true))
         {
-            printf("Did not receive any response to the probe request\n"); 
+            printf("Did not receive any response to the probe request, retrying\n"); 
             continue; 
         }
 
@@ -80,13 +80,13 @@ int main (int argc, char* argv[])
 
         if (!send_authentication_to_bssid_with_response(raw_socket, bssid, &response, &response_len))
         {
-            printf("Did not receive any response to the authentication request\n"); 
+            printf("Did not receive any response to the authentication request, retrying\n"); 
             continue;
         }
             
         if (!send_association_to_bssid_with_response(raw_socket, ssid, bssid, &response, &response_len))
         {
-            printf("Did not receive any response to the association request\n"); 
+            printf("Did not receive any response to the association request, retrying\n"); 
             continue;;
         }
         else break;

@@ -242,12 +242,26 @@ void* filter_mac_frames(void* data)
     // socket_context_t* context = (socket_context_t* )data; 
     mac_frame_t current_dequeued_frame;
     uint16_t frame_len;
+    bool match_found = false;
 
     printf("Started filtering thread with ID: %ld\n", (unsigned long) pthread_self());
     while(socket_context.running)
     {
-        if (dequeue_frame(&current_dequeued_frame, &frame_len))
+        pthread_mutex_lock(&socket_context.filter_mutex); 
+        
+        while (!socket_context.dequeue && socket_context.running) //prevent spurious wakeups
         {
+            pthread_cond_wait(&socket_context.filter_cond, &socket_context.filter_mutex); 
+        }
+        pthread_mutex_unlock(&socket_context.filter_mutex); //reease immediately the lock to reduce the locking period
+
+        //start dequeueing untill either the filtering gets trigger or the request timeout
+        while (socket_context.dequeue && socket_context.running)
+        {
+            if (dequeue_frame(&current_dequeued_frame, &frame_len))
+            {
+                match_found = false; 
+            
                 //grab a mutex while reading the current filters (which can be modified asynchronously)
                 pthread_mutex_lock(&socket_context.filter_mutex);
                 if (filter_frame(&current_dequeued_frame, frame_len, &socket_context.filters))
@@ -258,11 +272,18 @@ void* filter_mac_frames(void* data)
                     
                     //signal to other threads that a match has been found
                     socket_context.match = true;
+                    socket_context.dequeue = false;
                     pthread_cond_signal(&socket_context.filter_cond);
-                    print_frame(&current_dequeued_frame, frame_len, DEBUG); 
                 }
                 pthread_mutex_unlock(&socket_context.filter_mutex);
 
+                if (match_found)
+                {
+                    //do slow IO outside the lock
+                    print_frame(&current_dequeued_frame, frame_len, DEBUG); 
+                }
+
+            }
         }
     }
 }
@@ -273,6 +294,7 @@ void initialize_socket_context(int raw_socket)
     socket_context.raw_socket = raw_socket; 
     socket_context.running = true; 
     socket_context.match = false; 
+    socket_context.dequeue = false;
     pthread_mutex_init(&socket_context.filter_mutex, NULL);
     pthread_cond_init(&socket_context.filter_cond, NULL);
     initalize_queue(MiB(10));

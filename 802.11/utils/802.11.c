@@ -411,6 +411,7 @@ bool filter_frame(mac_frame_t* frame, uint16_t frame_len, struct filters* filter
 
 bool send_probe_request_to_ssid_with_response(int raw_socket, const char* ssid, mac_frame_t** response, uint16_t* response_len, bool verbose)
 {
+    //grab the lock to configure filters atomically
     pthread_mutex_lock(&socket_context.filter_mutex);
 
     // define the filters to catch the response
@@ -423,7 +424,11 @@ bool send_probe_request_to_ssid_with_response(int raw_socket, const char* ssid, 
 
     //reset flag atomically before sending request
     socket_context.match = false;
+    socket_context.dequeue = true;
+
+    //signal the filtering thread to start consuming from the queue
     pthread_mutex_unlock(&socket_context.filter_mutex);
+    pthread_cond_signal(&socket_context.filter_cond); 
 
     send_probe_request_to_ssid(raw_socket, ssid);
 
@@ -441,13 +446,14 @@ bool send_probe_request_to_ssid_with_response(int raw_socket, const char* ssid, 
         if (rc == ETIMEDOUT)
         {
             socket_context.match = false;
+            socket_context.dequeue = false; //stop dequeueing
             pthread_mutex_unlock(&socket_context.filter_mutex);
             return false;
         }
     }
+    socket_context.match = false; //reset flag
     *response = &filtered_frame; //zero copy
     *response_len = filtered_frame_len;
-    socket_context.match = false; //reset flag
     pthread_mutex_unlock(&socket_context.filter_mutex);
 
     //debug
@@ -499,6 +505,7 @@ int send_authentication_to_bssid(int raw_socket, const char* bssid)
 
 int send_authentication_to_bssid_with_response(int raw_socket, const char* bssid, mac_frame_t** response, uint16_t* response_len)
 {
+    //grab the lock to configure filters atomically
     pthread_mutex_lock(&socket_context.filter_mutex);
 
     // define the filters to catch the response
@@ -510,7 +517,11 @@ int send_authentication_to_bssid_with_response(int raw_socket, const char* bssid
 
     //reset flag atomically before sending request
     socket_context.match = false;
+    socket_context.dequeue = true;
+
+    //signal the filtering thread to start consuming from the queue
     pthread_mutex_unlock(&socket_context.filter_mutex);
+    pthread_cond_signal(&socket_context.filter_cond); 
 
     send_authentication_to_bssid(raw_socket, bssid);
 
@@ -528,13 +539,14 @@ int send_authentication_to_bssid_with_response(int raw_socket, const char* bssid
         if (rc == ETIMEDOUT)
         {
             socket_context.match = false;
+            socket_context.dequeue = false; //stop dequeueing
             pthread_mutex_unlock(&socket_context.filter_mutex);
             return false;
         }
     }
+    socket_context.match = false; //reset flag
     *response = &filtered_frame; //zero copy
     *response_len = filtered_frame_len;
-    socket_context.match = false; //reset flag
     pthread_mutex_unlock(&socket_context.filter_mutex);
 
     //debug
@@ -654,6 +666,7 @@ int send_association_to_bssid(int raw_socket, const char* ssid, const char* bssi
 
 int send_association_to_bssid_with_response(int raw_socket, const char* ssid, const char* bssid, mac_frame_t** response, uint16_t* response_len)
 {
+    //grab the lock to configure filters atomically
     pthread_mutex_lock(&socket_context.filter_mutex);
 
     //define the filters to catch the response
@@ -665,7 +678,11 @@ int send_association_to_bssid_with_response(int raw_socket, const char* ssid, co
 
     //reset flag atomically before sending request
     socket_context.match = false;
+    socket_context.dequeue = true;
+
+    //signal the filtering thread to start consuming from the queue
     pthread_mutex_unlock(&socket_context.filter_mutex);
+    pthread_cond_signal(&socket_context.filter_cond); 
 
     send_association_to_bssid(raw_socket, ssid, bssid);
 
@@ -683,13 +700,14 @@ int send_association_to_bssid_with_response(int raw_socket, const char* ssid, co
         if (rc == ETIMEDOUT)
         {
             socket_context.match = false;
+            socket_context.dequeue = false; //stop dequeueing
             pthread_mutex_unlock(&socket_context.filter_mutex);
             return false;
         }
     }
+    socket_context.match = false; //reset flag
     *response = &filtered_frame; //zero copy
     *response_len = filtered_frame_len;
-    socket_context.match = false; //reset flag
     pthread_mutex_unlock(&socket_context.filter_mutex);
 
     //debug
