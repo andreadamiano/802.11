@@ -87,7 +87,13 @@ int main (int argc, char* argv[])
         if (!send_association_to_bssid_with_response(raw_socket, ssid, bssid, &response, &response_len))
         {
             printf("Did not receive any response to the association request, retrying\n"); 
-            continue;;
+            continue;
+        }
+
+        if (!wait_eapol_frame(raw_socket, ssid, bssid, &response, &response_len))
+        {
+            printf("Did not receive any EAPOL message, retrying\n"); 
+            continue;
         }
         else break;
     

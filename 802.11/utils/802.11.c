@@ -716,3 +716,56 @@ int send_association_to_bssid_with_response(int raw_socket, const char* ssid, co
     
     return true;
 }
+
+int wait_eapol_frame(int raw_socket, const char* ssid, const char* bssid, mac_frame_t** response, uint16_t* response_len)
+{
+    //grab the lock to configure filters atomically
+    pthread_mutex_lock(&socket_context.filter_mutex);
+
+    //define the filters to catch the response
+    initialize_filters();
+    memset(&socket_context.filters.header.frame_control, 0, sizeof(frame_control_t));
+    socket_context.filters.header.frame_control.type = 2;
+    socket_context.filters.header.frame_control.from_ds = 1;
+    socket_context.filters.header.frame_control.to_ds = 0;
+    memcpy(socket_context.filters.header.address1.addr, spoofed_mac_address, MAC_LEN);
+    memcpy(socket_context.filters.header.address2.addr, bssid, MAC_LEN);
+
+    //reset flag atomically before sending request
+    socket_context.match = false;
+    socket_context.dequeue = true;
+
+    //signal the filtering thread to start consuming from the queue
+    pthread_mutex_unlock(&socket_context.filter_mutex);
+    pthread_cond_signal(&socket_context.filter_cond); 
+
+    pthread_mutex_lock(&socket_context.filter_mutex);
+
+    //initialize timeout
+    clock_gettime(CLOCK_REALTIME, &socket_context.ts); 
+    socket_context.ts.tv_sec += REQUEST_TIMEOUT;
+
+    while (!socket_context.match)
+    {
+        int rc = pthread_cond_timedwait(&socket_context.filter_cond, &socket_context.filter_mutex, &socket_context.ts);
+    
+        if (rc == ETIMEDOUT)
+        {
+            socket_context.match = false;
+            socket_context.dequeue = false; //stop dequeueing
+            pthread_mutex_unlock(&socket_context.filter_mutex);
+            return false; 
+        }
+    }
+
+    socket_context.match = false; 
+    *response = &filtered_frame;
+    *response_len = filtered_frame_len;
+    pthread_mutex_unlock(&socket_context.filter_mutex);
+
+    //debug
+    printf("EAPOL frame:\n");
+    print_frame(*response, *response_len, LOGGER_LEVEL);
+
+    return true;
+}

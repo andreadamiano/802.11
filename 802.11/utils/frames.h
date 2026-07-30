@@ -56,4 +56,38 @@ typedef struct {
     uint32_t it_present;     
 } __attribute__((packed)) radiotap_header_t;
 
+typedef struct {
+    uint8_t  dsap;       
+    uint8_t  ssap;       
+    uint8_t  control;    
+    uint8_t  oui[3];     
+    uint16_t ethertype;  
+} __attribute__((packed)) llc_snap_header_t;
+
+typedef struct {
+    uint8_t  version;             
+    uint8_t  packet_type;         
+    uint16_t packet_body_length;  
+} __attribute__((packed)) eapol_header_t;
+
+typedef struct {
+    uint8_t  key_descriptor_type; 
+    uint16_t key_info;            
+    uint16_t key_length;          
+    uint64_t replay_counter;      
+    uint8_t  key_nonce[32];       
+    uint8_t  key_iv[16];          
+    uint8_t  key_rsc[8];          
+    uint8_t  reserved[8];         
+    uint8_t  key_mic[16];         
+    uint16_t key_data_length;     
+    uint8_t  key_data[];          
+} __attribute__((packed)) eapol_key_frame_t;
+
+typedef struct {
+    llc_snap_header_t snap;
+    eapol_header_t    eapol;
+    eapol_key_frame_t key_frame;
+} __attribute__((packed)) complete_eapol_frame_t;
+
 #endif
