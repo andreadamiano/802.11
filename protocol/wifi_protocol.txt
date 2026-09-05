@@ -121,15 +121,15 @@ Media Access Control (MAC) Layer 2 sublayer:
         * station has completed MAC association, but cryptographic keys are not yet established
         * Class 1, Class 2, and Class 3 frames are allowed, but the Controlled Data Port is logically BLOCKED
         * only IEEE 802.1X / EAPOL keys exchange traffic is permitted
-        * IP data payloads arriving at the AP are discarded
+        * IP data payloads, ARP and upper-layer data payloads arriving at the AP are discarded untill the WPA 4 way handshake is completed
     - State 4: Authenticated, Associated, and Authorized (Controlled Port Unlocked)
-        * completed 4-Way Handshake (PTK and GTK derived and installed in hardware crypto engine)
+        * completed WPA 4-Way Handshake (PTK and GTK derived and installed in hardware crypto engine)
         * 802.1X controlled port unblocked; full encrypted user data payload flow (IP, ARP, TCP/UDP) is permitted
 
 
 Network authentication:
     1) EAPOL frames:
-        - Defined by IEEE 802.1X, used to encapsulate Extensible Authentication Protocol (EAP) packets over Ethernet and Wi-Fi networks (EtherType 0x888E)
+        - Defined by IEEE 802.1X, it's a general purpose layer 2 encapsulation format designed to transport authentication messages over Ethernet and Wi-Fi networks (EtherType 0x888E)
         - Operates directly at Layer 2 (MAC sublayer) before any IP address allocation or higher-layer network initialization
         - EAPOL Frame Types:
             * EAPOL-Start: sent by station (Supplicant) to signal its intent to begin network authentication
@@ -162,6 +162,7 @@ Network authentication:
 
     3) EAPOL frame format:
         - EAPOL frames are encapsulated inside an LLC / SNAP header, which is encapsulated inside the Frame Body of an 802.11 MAC Data frame
+        - LLC (Logical Link Control) and SNAP (Subnetwork access protocol) headers are layer 2 headers used to multiplex upper-layer protocols (like IP, ARP and EAPOL), they are used to allow 2 statiosn to exchange mutiple differen network protocols over the same medium
         - MAC Frame Header (Outer 802.11 MAC Header - Layer 2):
         * frame control: 2 bytes
             - protocol_version: 0b00 (IEEE 802.11 standard version)
